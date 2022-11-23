@@ -8,3 +8,4 @@ SpatialTools.egg-info/requires.txt
 SpatialTools.egg-info/top_level.txt
 spatial_tools/__init__.py
 spatial_tools/spatial_tools.py
+spatial_tools/test.py

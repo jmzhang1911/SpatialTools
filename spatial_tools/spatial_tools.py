@@ -199,7 +199,6 @@ class SpatialApp:
                 crop_coord = False
 
             if str(color_by) == 'None' and str(feature) == 'NULL':
-                logging.info('+')
 
                 if pic_data == 'hire He':
                     return px.imshow(spatial_tools_obj.__dict__['_pic'])
@@ -290,7 +289,7 @@ class SpatialApp:
             title={
                 'text': 'color by : {}'.format(color),
                 'x': 0.35,
-                'y':0.94,
+                'y': 0.94,
                 'xanchor': 'center',
                 'yanchor': 'top'},
             activeshape_opacity=0.9,
