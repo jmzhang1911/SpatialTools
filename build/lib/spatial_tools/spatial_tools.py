@@ -39,7 +39,7 @@ class SpatialApp:
     TOKEN = None
 
     @classmethod
-    def run_dash(cls, spatial_tools_obj, adata, port=30000, debug=False):
+    def run_dash(cls, spatial_tools_obj, adata, port=30000):
         from dash import Input, Output, dcc, html
         import plotly.express as px
         # import dash_daq as daq
@@ -64,14 +64,14 @@ class SpatialApp:
         else:
             raise ValueError('adata should be pd.DataFrame or anndata.AnnData ...')
 
-        # if 'leiden' in color_by_info:
-        #     color_by_value = 'leiden'
-        # elif 'seurat_cluster' in color_by_info:
-        #     color_by_value = 'seurat_cluster'
-        # elif 'cellType' in color_by_info:
-        #     color_by_value = 'cellType'
-        # else:
-        #     color_by_value = ''
+        if 'leiden' in color_by_info:
+            color_by_value = 'leiden'
+        elif 'seurat_cluster' in color_by_info:
+            color_by_value = 'seurat_cluster'
+        elif 'cellType' in color_by_info:
+            color_by_value = 'cellType'
+        else:
+            color_by_value = 'Please select ...'
 
         controls = dbc.Card(
             [
@@ -94,6 +94,7 @@ class SpatialApp:
                     html.Br(),
                     html.Label('Color by'),
                     dcc.Dropdown(color_by_info,
+                                 value=color_by_value,
                                  id='color_by'),
 
                     html.Br(),
@@ -150,7 +151,7 @@ class SpatialApp:
             Output('groups', 'options'),
             Input('color_by', 'value'))
         def set_groups_value(color_by):
-            return [str(_) for _ in adata[color_by].unique()]
+            return list(meta_data.value_counts(color_by).index)
 
         @app.callback(
             Output('selected-data', 'children'),
@@ -187,7 +188,6 @@ class SpatialApp:
                     low_pic = False
 
             if pic_data == 'only He':
-
                 pic_only = True
                 low_pic = False
             else:
@@ -198,23 +198,21 @@ class SpatialApp:
             else:
                 crop_coord = False
 
-            if str(color_by) == 'None' and str(feature) == 'NULL':
-                logging.info('+')
-
-                if pic_data == 'hire He':
-                    return px.imshow(spatial_tools_obj.__dict__['_pic'])
-                else:
-                    return px.imshow(spatial_tools_obj.__dict__['_low_pic'])
-
-            if str(feature) == 'NULL':
+            if feature == 'NULL' or feature == '':
                 feature = False
+
+                if color_by == 'Please select ...' or color_by == '':
+                    if pic_data == 'hire He':
+                        return px.imshow(spatial_tools_obj.__dict__['_pic'])
+                    else:
+                        return px.imshow(spatial_tools_obj.__dict__['_low_pic'])
 
             pic = spatial_tools_obj.s1000_spatial_plot(adata=adata,
                                                        color=color_by,
                                                        feature=feature,
                                                        size=point_size,
                                                        cmap=cmap,
-                                                       groups=list(groups) if groups else groups,
+                                                       groups=groups,
                                                        crop_coord=crop_coord,
                                                        draw_pic=draw_pic,
                                                        low_pic=low_pic,
@@ -223,7 +221,7 @@ class SpatialApp:
 
             return pic
 
-        app.run_server(debug=debug, mode='external', port=port, host='127.0.0.1')
+        app.run_server(debug=True, mode='external', port=port, host='127.0.0.1')
 
     @classmethod
     def terminate_server_for_port(cls):
@@ -280,20 +278,13 @@ class SpatialApp:
                            ))
 
         fig.update_layout(
-            legend=dict(yanchor="top",
-                        itemsizing='constant',
-                        font=dict(
-                            size=14,
-                            color="black"
-                        ),
-                        y=0.8),
             title={
                 'text': 'color by : {}'.format(color),
-                'x': 0.35,
-                'y':0.94,
+                'x': 0.5,
                 'xanchor': 'center',
                 'yanchor': 'top'},
-            activeshape_opacity=0.9,
+
+            autosize=True,
             width=float(figsize[0]) * 100,
             height=float(figsize[1]) * 100,
             margin=dict(l=40, r=40, t=40, b=40),
@@ -579,9 +570,6 @@ class SpatialTools:
                  'show_ticks_and_labels': True, 'shrink': 0.4, 'pad': 0.05}
 
         """
-        if color == 'class':
-            raise 'please change columns of class'
-
         if low_pic:
             if not self._low_contain:
                 raise ValueError('no low pic in SpatialTools')
@@ -626,7 +614,8 @@ class SpatialTools:
                 color_dict = dict(zip(prob, selected_col))
 
             if groups:
-
+                # filtering plot data
+                # logging.info('all elements in color column: {}'.format(plot_data[color].unique()))
                 for i in groups:
                     if i not in plot_data[color].unique():
                         raise 'groups not in column of color'
