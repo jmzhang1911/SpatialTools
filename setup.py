@@ -1,11 +1,11 @@
 from setuptools import setup
 from setuptools import find_packages
 
-VERSION = '0.1.2'
+VERSION = '0.1.3'
 
 setup(
     name='SpatialTools',  # package name
-    version='0.1.2',  # package version
+    version='0.1.3',  # package version
     description='spatial tools for S1000',  # package description
     packages=find_packages(),
     install_requires=['anndata>=0.8.0',
