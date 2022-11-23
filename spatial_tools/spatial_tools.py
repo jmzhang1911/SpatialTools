@@ -150,8 +150,6 @@ class SpatialApp:
             Output('groups', 'options'),
             Input('color_by', 'value'))
         def set_groups_value(color_by):
-            logging.info(color_by)
-            logging.info(meta_data[color_by].unique())
             return [str(_) for _ in meta_data[color_by].unique()]
 
         @app.callback(
