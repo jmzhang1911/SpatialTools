@@ -39,7 +39,7 @@ class SpatialApp:
     TOKEN = None
 
     @classmethod
-    def run_dash(cls, spatial_tools_obj, adata, port=30000, debug=False):
+    def run_dash(cls, spatial_tools_obj, adata, port=30000, debug=True):
         from dash import Input, Output, dcc, html
         import plotly.express as px
         # import dash_daq as daq
@@ -150,7 +150,9 @@ class SpatialApp:
             Output('groups', 'options'),
             Input('color_by', 'value'))
         def set_groups_value(color_by):
-            return [str(_) for _ in adata[color_by].unique()]
+            logging.info(color_by)
+            logging.info(meta_data[color_by].unique())
+            return [str(_) for _ in meta_data[color_by].unique()]
 
         @app.callback(
             Output('selected-data', 'children'),
@@ -222,6 +224,7 @@ class SpatialApp:
 
             return pic
 
+        logging.info('listen: http://127.0.0.1:{}/'.format(port))
         app.run_server(debug=debug, mode='external', port=port, host='127.0.0.1')
 
     @classmethod
@@ -267,6 +270,9 @@ class SpatialApp:
         else:
             fig = go.Figure()
 
+        if len(color_dict) > 100:
+            raise 'too much value'
+
         for key, group in plot_data_grouped:
             fig.add_trace(
                 go.Scatter(x=group['__x'],
@@ -288,8 +294,7 @@ class SpatialApp:
                         y=0.8),
             title={
                 'text': 'color by : {}'.format(color),
-                'x': 0.35,
-                'y': 0.94,
+                'x': 0.45,
                 'xanchor': 'center',
                 'yanchor': 'top'},
             activeshape_opacity=0.9,
@@ -383,9 +388,16 @@ class SpatialTools:
 
         self.point_size = self._auto_cal_radius(self.obsm)
         self.scalar = self._cal_zoom_rate(self._pic.shape[0], self._pic.shape[1])
+        self.level = str(self.obsm['barcode'][0]).split('_')[0]
 
         self._adata_type = None
         self._facet_pos_list = None
+
+    def __str__(self):
+        info = 'low pic: {}\nlevel: {}\nscalar: {}'. \
+            format('True' if self._low_contain else 'False',
+                   self.level, self.scalar)
+        return info
 
     @property
     def pic(self):
