@@ -268,8 +268,8 @@ class SpatialApp:
 
         for key, group in plot_data_grouped:
             fig.add_trace(
-                go.Scatter(x=group['x'],
-                           y=group['y'],
+                go.Scatter(x=group['__x'],
+                           y=group['__y'],
                            mode='markers',
                            marker=dict(color=group[plot_data_grouped.keys].map(color_dict),
                                        size=size),
@@ -324,8 +324,8 @@ class SpatialApp:
         info_list = list(zip(plot_data['barcode'], plot_data[feature]))
 
         fig.add_trace(
-            go.Scatter(x=plot_data['x'],
-                       y=plot_data['y'],
+            go.Scatter(x=plot_data['__x'],
+                       y=plot_data['__y'],
                        mode='markers',
                        marker=dict(size=size,
                                    color=plot_data[feature],
@@ -371,7 +371,7 @@ class SpatialTools:
             self._low_pic = None
             self._low_contain = False
 
-        self.obsm = pd.read_csv(barcodes_pos, '\t', names=['barcode', 'x', 'y'])
+        self.obsm = pd.read_csv(barcodes_pos, '\t', names=['barcode', '__x', '__y'])
 
         self.point_size = self._auto_cal_radius(self.obsm)
         self.scalar = self._cal_zoom_rate(self._pic.shape[0], self._pic.shape[1])
@@ -408,11 +408,11 @@ class SpatialTools:
         pref_pos = [0, 0]
         for index, item in cluster_pos_df.iterrows():
             if index != 0:
-                curr_pos = [item['y'], item['x']]
+                curr_pos = [item['__y'], item['__x']]
                 center_dist = np.sqrt((curr_pos[0] - pref_pos[0]) ** 2 + (curr_pos[1] - pref_pos[1]) ** 2)
                 if center_dist < radius:
                     radius = center_dist
-            pref_pos = [item['y'], item['x']]
+            pref_pos = [item['__y'], item['__x']]
             if index > 1000:
                 break
         radius = round(radius * 0.618 / 2)
@@ -516,11 +516,11 @@ class SpatialTools:
         pic = self._low_pic if low_pic else self._pic
         pic = pic[x1:x2, y1:y2, :]
 
-        plot_data = plot_data.query('{} <= x <= {} & {} <= y <= {}'.format(y1, y2, x1, x2))
+        plot_data = plot_data.query('{} <= __x <= {} & {} <= __y <= {}'.format(y1, y2, x1, x2))
         plot_data2 = plot_data.copy()
 
-        plot_data2['y'] = plot_data2['y'] - x1
-        plot_data2['x'] = plot_data2['x'] - y1
+        plot_data2['__y'] = plot_data2['__y'] - x1
+        plot_data2['__x'] = plot_data2['__x'] - y1
 
         return pic, plot_data2
 
@@ -575,13 +575,19 @@ class SpatialTools:
                 raise ValueError('no low pic in SpatialTools')
 
         if isinstance(adata, sc.AnnData):
+            adata = adata.copy()
+            adata.obs.index.name = None
             adata.obs['barcode'] = adata.obs.index
             self._adata_type = 'AnnData'
             plot_data = self.obsm.merge(adata.obs, on='barcode')
 
         elif isinstance(adata, pd.DataFrame):
+            adata = adata.copy()
             adata.index.name = None
-            adata['barcode'] = adata.index
+
+            if 'barcode' not in adata.columns:
+                adata['barcode'] = adata.index
+
             self._adata_type = 'DataFrame'
             plot_data = self.obsm.merge(adata, on='barcode')
 
@@ -623,12 +629,12 @@ class SpatialTools:
                 color_dict = {k: self._lighten_color(v, darken) for k, v in color_dict.items()}
 
             if not low_pic:
-                plot_data['x'] = plot_data['x'] * self.scalar
-                plot_data['y'] = plot_data['y'] * self.scalar
+                plot_data['__x'] = plot_data['__x'] * self.scalar
+                plot_data['__y'] = plot_data['__y'] * self.scalar
 
             else:
-                plot_data['x'] = plot_data['x'] * self.low_scalar
-                plot_data['y'] = plot_data['y'] * self.low_scalar
+                plot_data['__x'] = plot_data['__x'] * self.low_scalar
+                plot_data['__y'] = plot_data['__y'] * self.low_scalar
 
             if crop_coord:
                 plot_pic, plot_data = self._crop_coord(plot_data=plot_data, low_pic=low_pic, crop_coord=crop_coord)
@@ -666,7 +672,7 @@ class SpatialTools:
                         plt.tight_layout()
                         start += 1
 
-                    group.plot(ax=ax, kind='scatter', x='x', y='y',
+                    group.plot(ax=ax, kind='scatter', x='__x', y='__y',
                                label=key,
                                c=color_dict[key],
                                s=size,
@@ -735,12 +741,12 @@ class SpatialTools:
                 plot_para_dict = self._change_para_dict(plot_para_dict, para_dict)
 
             if not low_pic:
-                plot_data['x'] = plot_data['x'] * self.scalar
-                plot_data['y'] = plot_data['y'] * self.scalar
+                plot_data['__x'] = plot_data['__x'] * self.scalar
+                plot_data['__y'] = plot_data['__y'] * self.scalar
 
             else:
-                plot_data['x'] = plot_data['x'] * self.low_scalar
-                plot_data['y'] = plot_data['y'] * self.low_scalar
+                plot_data['__x'] = plot_data['__x'] * self.low_scalar
+                plot_data['__y'] = plot_data['__y'] * self.low_scalar
 
             if crop_coord:
                 plot_pic, plot_data = self._crop_coord(plot_data=plot_data, low_pic=low_pic, crop_coord=crop_coord)
@@ -783,8 +789,8 @@ class SpatialTools:
                 else:
                     value = plot_data[feature]
 
-                plt.scatter(x=plot_data['x'],
-                            y=plot_data['y'],
+                plt.scatter(x=plot_data['__x'],
+                            y=plot_data['__y'],
                             alpha=alpha,
                             s=size, cmap=cmap,
                             c=value)
