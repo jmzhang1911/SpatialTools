@@ -851,7 +851,7 @@ class SpatialTools:
 
 if __name__ == '__main__':
     desc = """
-    Version: Version beta v0.8
+    Version: Version beta
     Contact: zhangjm <zhangjm@biomarker.com.cn>
     Program Date: 2022.10.25
     Description: spatial tools
