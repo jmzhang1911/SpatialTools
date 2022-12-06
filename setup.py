@@ -1,11 +1,11 @@
 from setuptools import setup
 from setuptools import find_packages
 
-VERSION = '2.0.0'
+VERSION = '2.0.1'
 
 setup(
     name='SpatialTools',  # package name
-    version='2.0.0',  # package version
+    version='2.0.1',  # package version
     description='spatial tools for S1000',  # package description
     packages=find_packages(),
     install_requires=['anndata>=0.8.0',
@@ -21,7 +21,8 @@ setup(
                       'matplotlib-inline>=0.1.6',
                       'plotly>=5.10.0',
                       # 'scikit-learn==1.1.2',
-                      'pickle>=3.0.0',
+                      'jsonpickle>=3.0.0',
+                      'pickleshare>=0.7.5',
                       'seaborn>=0.12.0',
                       'dash-uploader==0.7.0a1'],
     zip_safe=False,
