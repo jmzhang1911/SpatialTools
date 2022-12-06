@@ -1,5 +1,11 @@
 #!/share/nas2/genome/biosoft/Python//3.7.3/bin/python3
 # -*- coding: utf-8 -*-
+# @Time : 2022/12/5 16:57
+# @Author : jmzhang
+# @Email : zhangjm@biomarker.com.cn
+
+# !/share/nas2/genome/biosoft/Python//3.7.3/bin/python3
+# -*- coding: utf-8 -*-
 # @Time : 2022/10/21 11:27
 # @Author : jmzhang
 # @Email : zhangjm@biomarker.com.cn
@@ -23,6 +29,8 @@ import json
 import math
 import re
 
+import spatial_tools
+
 FORMAT = '%(asctime)s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT, datefmt='%Y-%m-%d %H:%M:%S')
 
@@ -41,6 +49,57 @@ class SpatialApp:
         }
     }
     TOKEN = None
+
+    _meta_data = None
+    _spatial_tools_object = None
+    _adata = None
+
+    _feature_info = None
+    _color_by_info = None
+
+    @classmethod
+    def color_by_dropdown(cls):
+        from dash import dcc, html
+
+        if cls._color_by_info is None:
+            return [html.Label('Color by'),
+                    dcc.Dropdown(id='color_by')]
+
+        else:
+            return [html.Label('Color by'),
+                    dcc.Dropdown(cls._color_by_info, id='color_by')]
+
+    @classmethod
+    def density_by_dropdown(cls):
+        from dash import dcc, html
+
+        if cls._color_by_info is None:
+            return [html.Label('density by'),
+                    dcc.Dropdown(id='density_by')]
+
+        else:
+            return [html.Label('density by'),
+                    dcc.Dropdown(cls._color_by_info, id='density_by')]
+
+    @classmethod
+    def feature_dropdown(cls):
+        from dash import dcc, html
+
+        if cls._feature_info is None:
+            return [html.Label('Feature'),
+                    dcc.Dropdown(id='feature')]
+        else:
+            return [html.Label('Feature'),
+                    dcc.Dropdown(cls._feature_info, id='feature')]
+
+    @classmethod
+    def WHITEHOLE_store(cls):
+        from dash import dcc
+
+        if cls._spatial_tools_object is None:
+            return dcc.Store(id='WHITEHOLE')
+        else:
+            return dcc.Store(data='from kwargs', id='WHITEHOLE')
 
     @classmethod
     def run_dash(cls, spatial_tools_obj=None, adata=None, port=30000, debug=False):
@@ -63,34 +122,27 @@ class SpatialApp:
                              for i in selectedData['points']]
             return barcodes_list
 
+        if isinstance(spatial_tools_obj, spatial_tools.SpatialTools):
+            cls._spatial_tools_object = spatial_tools_obj
+
         if isinstance(adata, pd.DataFrame):
-            color_by_info = adata.columns
-            feature_info = adata.columns
-            meta_data = adata
+            cls._adata = adata
+            cls._meta_data = adata
+            cls._feature_info = adata.columns
+            cls._color_by_info = adata.columns
 
         elif isinstance(adata, anndata.AnnData):
-            color_by_info = adata.obs.columns
-            feature_info = adata.var.index
-            meta_data = adata.obs
-
-        else:
-            raise exceptions.PreventUpdate
-            # raise ValueError('adata should be pd.DataFrame or anndata.AnnData ...')
-
-        # if 'leiden' in color_by_info:
-        #     color_by_value = 'leiden'
-        # elif 'seurat_cluster' in color_by_info:
-        #     color_by_value = 'seurat_cluster'
-        # elif 'cellType' in color_by_info:
-        #     color_by_value = 'cellType'
-        # else:
-        #     color_by_value = ''
+            cls._adata = adata
+            cls._meta_data = adata.obs
+            cls._feature_info = adata.var.index
+            cls._color_by_info = adata.obs.columns
 
         controls = dbc.Card(
 
             [
-                dcc.Store(id='spatial_tools_obj'),
-                # dcc.Store(id='meta_data'),
+                dcc.Store(id='BLACKHOLE'),
+
+                cls.WHITEHOLE_store(),
                 dbc.Accordion([
                     dbc.AccordionItem([
                         dbc.Card([
@@ -109,8 +161,6 @@ class SpatialApp:
                     ], title="about"),
                     dbc.AccordionItem([
                         dbc.Row([
-
-                            html.Div(id='tmp1'),
                             dbc.Col([
                                 du.Upload(
                                     id='upload_spatial_tools',
@@ -123,7 +173,7 @@ class SpatialApp:
                                 du.Upload(
                                     id='upload_adata',
                                     text='pd.DataFrame or AnnData',
-                                    filetypes=['pickle', 'gz', 'pkl', 'csv', 'h5ad', 'loom']
+                                    filetypes=['csv', 'h5ad', 'loom', 'xls']
                                 ),
                                 html.Div(id='callback-output2')
                             ], md=7)
@@ -164,9 +214,7 @@ class SpatialApp:
                         )
                     ], title='Basic setting'),
                     dbc.AccordionItem([
-                        html.Div([html.Label('Color by'),
-                                  dcc.Dropdown(color_by_info,
-                                               id='color_by')],
+                        html.Div(cls.color_by_dropdown(),
                                  style={'display': 'inline-block',
                                         'width': '32%',
                                         "margin-left": "0px"}),
@@ -179,8 +227,7 @@ class SpatialApp:
                                   "margin-left": "18px"})
                     ], title='Discrete variables'),
                     dbc.AccordionItem([
-                        html.Div([html.Label('Feature'),
-                                  dcc.Dropdown(feature_info, 'NULL', id='feature')],
+                        html.Div(cls.feature_dropdown(),
                                  style={'display': 'inline-block',
                                         'width': '40%'}),
                         html.Div([html.Label("Feature color Scale"),
@@ -194,9 +241,7 @@ class SpatialApp:
                                         "margin-left": "18px"})
                     ], title='Continuous variables'),
                     dbc.AccordionItem([
-                        html.Div([html.Label('density by'),
-                                  dcc.Dropdown(color_by_info,
-                                               id='density_by')],
+                        html.Div(cls.density_by_dropdown(),
                                  style={'display': 'inline-block',
                                         'width': '50%'}),
 
@@ -236,47 +281,19 @@ class SpatialApp:
                                            ),
                                 dcc.Download(id="download-text-index"),
 
-                                dbc.Button("re-clustering", id="Re-cluster", className="me-1", color='warning'
+                                dbc.Button("re-clustering",
+                                           id="Re-cluster",
+                                           className="me-1",
+                                           color='success',
+                                           external_link=True
                                            # style={'font-size': '12px',
                                            #        'display': 'inline-block',
                                            #        'margin-left': '15px',
                                            #        'width': 105}
                                            ),
+                                dcc.Download(id='down-load-re-clustered-h5ad')
 
-                                dbc.Button("re-clustered download", id="download-reclustered", className="me-1",
-                                            color='success',
-                                           # style={'font-size': '15px',
-                                           #        'display': 'inline-block',
-                                           #        'margin-left': '15px',
-                                           #        'width': 125}
-                                           )
-                            ], className="d-grid gap-2 d-md-flex justify-content-md-center"),
-                            # dbc.Col([
-                            #     dbc.Button("Download selected", id="selected_barcodes", className="me-1",
-                            #                # style={'font-size': '10px',
-                            #                #        'width': 100,
-                            #                #        'height':30,
-                            #                #        'display': 'inline-block'}
-                            #                       ),
-                            #     dcc.Download(id="download-text-index")
-                            # ], md=3),
-                            # dbc.Col([
-                            #     dbc.Button("re-clustering", id="Re-cluster", className="me-1", color='warning',
-                            #                # style={'font-size': '12px',
-                            #                #        'display': 'inline-block',
-                            #                #        'margin-left': '15px',
-                            #                #        'width': 105}
-                            #                )
-                            # ], md=3, style={"margin-left": "30px"}),
-                            # dbc.Col([
-                            #     dbc.Button("re-clustered download", id="download-reclustered", className="me-1",
-                            #                # color='success',
-                            #                # style={'font-size': '15px',
-                            #                #        'display': 'inline-block',
-                            #                #        'margin-left': '15px',
-                            #                #        'width': 125}
-                            #                )
-                            # ], md=3, style={"margin-left": "30px"}),
+                            ], className="d-grid gap-2 d-md-flex justify-content-md-left"),
                         ]),
                         html.Br(),
                         dbc.Row([
@@ -310,67 +327,55 @@ class SpatialApp:
             fluid=True,
         )
 
-        # @du.callback(
-        #     output=Output("spatial_tools_obj", "data"),
-        #     id="upload_spatial_tools",
-        # )
-        # def upload_spatial_tools_object(status: du.UploadStatus):
-        #     return str(status.latest_file)
+        @du.callback(
+            Output('BLACKHOLE', 'data'),
+            id='upload_adata',
+        )
+        def upload_adata(status: du.UploadStatus):
+            logging.info('upload adata {} done'.format(str(status.latest_file)))
+            return str(status.latest_file)
 
-        # @du.callback(
-        #     # [Output('color_by', 'options'),
-        #     #  Output('feature', 'options'),
-        #     #  Output('meta_data', 'data')],
-        #     Output('tmp1', 'children'),
-        #     id='upload_adata',
-        # )
-        # def upload_adata(status: du.UploadStatus):
-        #     # if str(status.latest_file).endswith('h5ad'):
-        #     #     logging.info('input adata ... ')
-        #     #     adata = ad.read_h5ad(str(status.latest_file))
-        #     #     color_by_info = adata.obs.columns
-        #     #     feature_info = adata.var.index
-        #     #     meta_data = adata.obs
-        #     #
-        #     # else:
-        #     #     feature_info = ['a', 'b', 'c']
-        #
-        #     # return list(color_by_info), list(feature_info), meta_data
-        #
-        #     logging.info('input adata ... ')
-        #
-        #
-        #     return str(status.latest_file)
-        #
-        # @app.callback(
-        #     Output('meta_data', 'data'),
-        #     Input('tmp1', 'children')
-        # )
-        # def load_adata(tmp1):
-        #     meta_data = pd.read_csv(tmp1, sep=',')
-        #     logging.info('|||meta_data : {}'.format(meta_data))
-        #     print(meta_data)
-        #
-        #     return meta_data
-        #
-        # @app.callback(
-        #     Output('color_by', 'options'),
-        #     Input('meta_data','data')
-        # )
-        # def option_color_by(meta_data):
-        #     logging.info('===== meta_data {}'.format(meta_data))
-        #     return meta_data.columes
+        @du.callback(
+            Output('WHITEHOLE', 'data'),
+            id='upload_spatial_tools'
+        )
+        def upload_spatial_tools_obj(status: du.UploadStatus):
+            logging.info('upload  spatial_tools.SpatialTools {} done'.format(str(status.latest_file)))
+            cls._spatial_tools_object = SpatialTools.load_from(str(status.latest_file))
+            return str(status.latest_file)
 
-        # @app.callback(
-        #     Output('callback-output', 'children'),
-        #     Input('spatial_tools_obj', 'data'),
-        # )
-        # def test(spatial_tools_obj):
-        #     logging.info('+++++ {}'.format(spatial_tools_obj))
-        #     if spatial_tools_obj:
-        #         spatial_tools_obj = SpatialTools.load_from(spatial_tools_obj)
-        #         logging.info(spatial_tools_obj)
-        #     return ['xxxxx']
+        @app.callback(
+            [Output('color_by', 'options'),
+             Output('density_by', 'options'),
+             Output('feature', 'options')],
+            Input('BLACKHOLE', 'data')
+        )
+        def get_adata(adata_path:Path):
+
+            if not adata_path:
+                raise exceptions.PreventUpdate
+
+            if Path(adata_path).suffix in ['.xls', '.csv']:
+                _adata = pd.read_csv(str(adata_path), sep='\t')
+                cls._adata = _adata
+                cls._meta_data = _adata
+                cls._feature_info = _adata.columns
+                cls._color_by_info = _adata.columns
+                logging.info('reading upload data as Pandas')
+
+            else:
+                if Path(adata_path).suffix == '.loom':
+                    _adata = sc.read_loom(adata_path)
+                else:
+                    _adata = ad.read_h5ad(adata_path)
+
+                cls._adata = _adata
+                cls._meta_data = _adata.obs
+                cls._feature_info = _adata.var.index
+                cls._color_by_info = _adata.obs.columns
+                logging.info('reading upload data as anndata')
+
+            return cls._color_by_info, cls._color_by_info, cls._feature_info
 
         @app.callback(
             Output('download-text-index', 'data'),
@@ -396,13 +401,50 @@ class SpatialApp:
                 raise exceptions.PreventUpdate
 
         @app.callback(
+            Output('down-load-re-clustered-h5ad', 'data'),
+            [Input('Re-cluster', 'n_clicks'),
+             Input('cluster-graph', 'selectedData')],
+            prevent_initial_call=True,
+
+        )
+        def re_cluster(n_clicks, selectedData):
+            output_data = '__cache__/selected_barcodes_reclustered.h5ad'
+            SpatialTools.check_dir_exists(output_data)
+
+            if n_clicks is None:
+                raise exceptions.PreventUpdate
+
+            elif ctx.triggered_id == 'Re-cluster' and selectedData and isinstance(cls._adata, anndata.AnnData):
+                logging.info('doing re-clustered')
+
+                # TODO re-clustered
+                with open(output_data, 'w') as f:
+                    f.write('hello dash!\n')
+
+                seleceted_barcodes = resolve_selected_data(selectedData)
+                _adata = cls._adata[seleceted_barcodes,:]
+                sc.pp.normalize_total(_adata, inplace=True)
+                sc.pp.log1p(_adata)
+                sc.pp.highly_variable_genes(_adata, flavor="seurat", n_top_genes=2000)
+                sc.pp.pca(_adata)
+                sc.pp.neighbors(_adata)
+                sc.tl.leiden(_adata, key_added="clusters")
+
+                _adata.write_h5ad(output_data)
+
+                return dcc.send_file(output_data)
+
+            else:
+                raise exceptions.PreventUpdate
+
+        @app.callback(
             Output('groups', 'options'),
             Input('color_by', 'value')
         )
         def set_groups_value(color_by):
-            logging.info('in groups ... meta_data: {}'.format(meta_data))
-            logging.info('in groups ... color_by: {}'.format(color_by))
-            return [str(_) for _ in meta_data[color_by].unique()]
+            if cls._meta_data is None or color_by is None:
+                raise exceptions.PreventUpdate
+            return [str(_) for _ in cls._meta_data[color_by].unique()]
 
         @app.callback(
             Output('selected-data', 'children'),
@@ -428,12 +470,12 @@ class SpatialApp:
             # logging.info('selectedData: {}'.format(selectedData))
 
             if density_by:
-                df = meta_data
+                df = cls._meta_data
                 if groups:
-                    df = meta_data.query('{} in {}'.format(color_by, groups))
+                    df = cls._meta_data.query('{} in {}'.format(color_by, groups))
 
                 if selectedData and selectedData['points']:
-                    df = meta_data.filter(items=resolve_selected_data(selectedData), axis=0)
+                    df = cls._meta_data.filter(items=resolve_selected_data(selectedData), axis=0)
 
                 fig = px.histogram(df[density_by])
                 fig.update_layout(
@@ -448,6 +490,7 @@ class SpatialApp:
         @app.callback(
             Output("cluster-graph", "figure"),
             [
+                Input('WHITEHOLE', 'data'),
                 Input("color_by", 'value'),
                 Input('alpha', 'value'),
                 Input('feature', 'value'),
@@ -461,8 +504,8 @@ class SpatialApp:
                 Input('y2', 'value'),
             ],
         )
-        def make_graph(color_by, alpha, feature, pic_data, cmap, point_size, groups, x1, x2, y1, y2):
-
+        def make_graph(WHITEHOLE, color_by, alpha, feature, pic_data, cmap, point_size, groups, x1, x2, y1, y2):
+            logging.info('plotting =={}'.format(WHITEHOLE))
             if pic_data == 'no He':
                 draw_pic = False
                 low_pic = False
@@ -480,18 +523,28 @@ class SpatialApp:
             else:
                 pic_only = False
 
-            if x1 and x2 and y1 and y2:
+            if (x1 and x2 and y1 and y2) and WHITEHOLE is not None:
+                logging.info('1')
                 x1, x2, y1, y2 = math.ceil(x1), math.ceil(x2), math.ceil(y1), math.ceil(y2)
                 crop_coord = [y1, y2, x1, x2]
-                return_low_pic = spatial_tools_obj.__dict__['_low_pic'][y1:y2, x1:x2, :]
-                return_hire_pic = spatial_tools_obj.__dict__['_pic'][y1:y2, x1:x2, :]
+
+                return_low_pic = cls._spatial_tools_object.__dict__['_low_pic'][y1:y2, x1:x2, :]
+                return_hire_pic = cls._spatial_tools_object.__dict__['_pic'][y1:y2, x1:x2, :]
             else:
-                return_low_pic = spatial_tools_obj.__dict__['_low_pic']
-                return_hire_pic = spatial_tools_obj.__dict__['_pic']
-                crop_coord = False
+                if WHITEHOLE is not None:
+                    logging.info('2')
+                    return_low_pic = cls._spatial_tools_object.__dict__['_low_pic']
+                    return_hire_pic = cls._spatial_tools_object.__dict__['_pic']
+                    crop_coord = False
+                else:
+                    logging.info('3')
+                    raise exceptions.PreventUpdate
 
-            if str(color_by) == 'None' and str(feature) == 'NULL':
-
+            logging.info('color_by={}'.format(color_by))
+            logging.info('feature={}'.format(feature))
+            logging.info('WHITEHOLE={}'.format(WHITEHOLE))
+            if (str(color_by) == 'None' and str(feature) == 'None') or WHITEHOLE is None:
+                logging.info('4')
                 if pic_data == 'hire He':
 
                     return px.imshow(return_hire_pic)
@@ -499,21 +552,22 @@ class SpatialApp:
 
                     return px.imshow(return_low_pic)
 
-            if str(feature) == 'NULL':
+            if str(feature) == 'None':
                 feature = False
 
-            pic = spatial_tools_obj.s1000_spatial_plot(adata=adata,
-                                                       color=color_by,
-                                                       feature=feature,
-                                                       size=float(point_size),
-                                                       cmap=cmap,
-                                                       groups=list(groups) if groups else groups,
-                                                       crop_coord=crop_coord,
-                                                       draw_pic=draw_pic,
-                                                       low_pic=low_pic,
-                                                       pic_only=pic_only,
-                                                       alpha=alpha,
-                                                       interactive=True)
+            logging.info('plotting')
+            pic = cls._spatial_tools_object.s1000_spatial_plot(adata=cls._adata,
+                                                               color=color_by,
+                                                               feature=feature,
+                                                               size=float(point_size),
+                                                               cmap=cmap,
+                                                               groups=list(groups) if groups else groups,
+                                                               crop_coord=crop_coord,
+                                                               draw_pic=draw_pic,
+                                                               low_pic=low_pic,
+                                                               pic_only=pic_only,
+                                                               alpha=alpha,
+                                                               interactive=True)
 
             return pic
 
@@ -535,6 +589,7 @@ class SpatialApp:
     @staticmethod
     def plotly_plot_save(to_save, fig):
         import plotly
+
         if not Path(to_save).parent.exists():
             Path(to_save).parent.mkdir(exist_ok=True, parents=True)
 
