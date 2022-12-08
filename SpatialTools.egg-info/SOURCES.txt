@@ -7,6 +7,7 @@ SpatialTools.egg-info/not-zip-safe
 SpatialTools.egg-info/requires.txt
 SpatialTools.egg-info/top_level.txt
 spatial_tools/__init__.py
+spatial_tools/demo.py
 spatial_tools/demo_v1.py
 spatial_tools/run_app.py
 spatial_tools/spatial_tools.py

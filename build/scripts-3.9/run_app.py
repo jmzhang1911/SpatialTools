@@ -20,6 +20,6 @@ if __name__ == '__main__':
     parser.add_argument('--port', type=int, help='port', default=5070)
     input_args = parser.parse_args()
 
-    spatial_tools.SpatialApp.run_dash(port=input_args.port, debug=True)
+    spatial_tools.SpatialApp.run_dash(port=input_args.port, debug=False)
 
 
