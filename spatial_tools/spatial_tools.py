@@ -9,6 +9,7 @@
 # @Time : 2022/10/21 11:27
 # @Author : jmzhang
 # @Email : zhangjm@biomarker.com.cn
+import time
 
 from matplotlib.axes._axes import _log as matplotlib_axes_logger
 import matplotlib.pyplot as plt
@@ -102,6 +103,30 @@ class SpatialApp:
             return dcc.Store(data='from kwargs', id='WHITEHOLE')
 
     @classmethod
+    def return_text_replace_figure(cls, text, size):
+        return {
+            "layout": {
+                "xaxis": {
+                    "visible": False
+                },
+                "yaxis": {
+                    "visible": False
+                },
+                "annotations": [
+                    {
+                        "text": text,
+                        "xref": "paper",
+                        "yref": "paper",
+                        "showarrow": False,
+                        "font": {
+                            "size": size
+                        }
+                    }
+                ]
+            }
+        }
+
+    @classmethod
     def run_dash(cls, spatial_tools_obj=None, adata=None, port=30000, debug=False):
         from dash import Input, Output, dcc, html, exceptions, ctx, State
         import plotly.express as px
@@ -141,7 +166,6 @@ class SpatialApp:
 
             [
                 dcc.Store(id='BLACKHOLE'),
-
                 cls.WHITEHOLE_store(),
                 dbc.Accordion([
                     dbc.AccordionItem([
@@ -151,7 +175,7 @@ class SpatialApp:
                                 # html.H6("Card subtitle", className="card-subtitle"),
                                 html.P("Analysis and visualization of data from the S1000 sequencing platform.\n"
                                        "If you have any suggestions please contact zhangjm@biomarker.com, \nthank you!",
-                                       className="card-text",
+                                       className="card-text",style={"width": "100%"}
                                        ),
                                 dbc.CardLink("about us", href="http://www.biomarker.com.cn/about-us"),
                                 dbc.CardLink("more tools", href="https://international.biocloud.net/zh/user/login"),
@@ -165,7 +189,7 @@ class SpatialApp:
                                 du.Upload(
                                     id='upload_spatial_tools',
                                     text='SpatialTools obj',
-                                    filetypes=['pickle', 'gz', 'pkl', 'csv']
+                                    filetypes=['pickle', 'gz', 'pkl', 'len']
                                 ),
                                 html.Div(id='callback-output')
                             ], md=5),
@@ -195,6 +219,7 @@ class SpatialApp:
                                     id='point_size',
                                     type="number",
                                     placeholder="point size",
+                                    min=0.000001,
                                     value=1,
                                     style={'width': 80}
                                 )
@@ -318,7 +343,7 @@ class SpatialApp:
                                 md=3,
                                 style={'height': '80vh'}),
                         dbc.Col(dcc.Graph(id="cluster-graph",
-                                          style={'width': '80vh', 'height': '80vh'}),
+                                          style={'width': '65vh', 'height': '65vh'}),
                                 md=6)
                     ],
                     align="center",
@@ -350,7 +375,7 @@ class SpatialApp:
              Output('feature', 'options')],
             Input('BLACKHOLE', 'data')
         )
-        def get_adata(adata_path:Path):
+        def get_adata(adata_path: Path):
 
             if not adata_path:
                 raise exceptions.PreventUpdate
@@ -387,6 +412,7 @@ class SpatialApp:
         )
         def download_barcodes(n_clicks, selectedData):
             logging.info('--> in download_barcodes')
+
             if n_clicks is None:
                 logging.info('--> in download_barcodes1')
                 raise exceptions.PreventUpdate
@@ -422,7 +448,7 @@ class SpatialApp:
                     f.write('hello dash!\n')
 
                 seleceted_barcodes = resolve_selected_data(selectedData)
-                _adata = cls._adata[seleceted_barcodes,:]
+                _adata = cls._adata[seleceted_barcodes, :]
                 sc.pp.normalize_total(_adata, inplace=True)
                 sc.pp.log1p(_adata)
                 sc.pp.highly_variable_genes(_adata, flavor="seurat", n_top_genes=2000)
@@ -485,12 +511,13 @@ class SpatialApp:
 
                 return fig
 
-            raise exceptions.PreventUpdate
+            return cls.return_text_replace_figure(text='Please select density value', size=20)
 
         @app.callback(
             Output("cluster-graph", "figure"),
             [
                 Input('WHITEHOLE', 'data'),
+                Input('BLACKHOLE', 'data'),
                 Input("color_by", 'value'),
                 Input('alpha', 'value'),
                 Input('feature', 'value'),
@@ -504,8 +531,14 @@ class SpatialApp:
                 Input('y2', 'value'),
             ],
         )
-        def make_graph(WHITEHOLE, color_by, alpha, feature, pic_data, cmap, point_size, groups, x1, x2, y1, y2):
+        def make_graph(WHITEHOLE, BLACKHOLE, color_by,
+                       alpha, feature, pic_data,
+                       cmap, point_size, groups,
+                       x1, x2, y1, y2):
+            logging.info('----> ')
             logging.info('plotting =={}'.format(WHITEHOLE))
+            logging.info('plotting =={}'.format(BLACKHOLE))
+
             if pic_data == 'no He':
                 draw_pic = False
                 low_pic = False
@@ -537,8 +570,7 @@ class SpatialApp:
                     return_hire_pic = cls._spatial_tools_object.__dict__['_pic']
                     crop_coord = False
                 else:
-                    logging.info('3')
-                    raise exceptions.PreventUpdate
+                    return cls.return_text_replace_figure(text='Please upload a SpatialTools object', size=35)
 
             logging.info('color_by={}'.format(color_by))
             logging.info('feature={}'.format(feature))
@@ -547,29 +579,41 @@ class SpatialApp:
                 logging.info('4')
                 if pic_data == 'hire He':
 
-                    return px.imshow(return_hire_pic)
+                    return px.imshow(return_hire_pic, binary_string=True, binary_compression_level=5)
                 else:
 
-                    return px.imshow(return_low_pic)
+                    return px.imshow(return_low_pic, binary_string=True, binary_compression_level=5)
 
             if str(feature) == 'None':
                 feature = False
 
             logging.info('plotting')
-            pic = cls._spatial_tools_object.s1000_spatial_plot(adata=cls._adata,
-                                                               color=color_by,
-                                                               feature=feature,
-                                                               size=float(point_size),
-                                                               cmap=cmap,
-                                                               groups=list(groups) if groups else groups,
-                                                               crop_coord=crop_coord,
-                                                               draw_pic=draw_pic,
-                                                               low_pic=low_pic,
-                                                               pic_only=pic_only,
-                                                               alpha=alpha,
-                                                               interactive=True)
 
-            return pic
+            try:
+                if point_size is None:
+                    raise exceptions.PreventUpdate
+
+                pic = cls._spatial_tools_object.s1000_spatial_plot(adata=cls._adata,
+                                                                   color=color_by,
+                                                                   feature=feature,
+                                                                   size=float(point_size),
+                                                                   cmap=cmap,
+                                                                   groups=list(groups) if groups else groups,
+                                                                   crop_coord=crop_coord,
+                                                                   draw_pic=draw_pic,
+                                                                   low_pic=low_pic,
+                                                                   pic_only=pic_only,
+                                                                   alpha=alpha,
+                                                                   interactive=True)
+
+                logging.info('end')
+                pic.update_layout(uirevision=True)
+
+                return pic
+
+            except:
+
+                raise exceptions.PreventUpdate
 
         logging.info('listen: http://127.0.0.1:{}/'.format(port))
         app.run_server(debug=debug, mode='external', port=port, host='127.0.0.1')
@@ -612,10 +656,10 @@ class SpatialApp:
         import plotly.express as px
 
         if pic_only:
-            return px.imshow(pic)
+            return px.imshow(pic, binary_string=True, binary_compression_level=5)
 
         if draw_pic:
-            fig = px.imshow(pic)
+            fig = px.imshow(pic, binary_string=True, binary_compression_level=5)
         else:
             fig = go.Figure()
 
@@ -624,17 +668,18 @@ class SpatialApp:
 
         for key, group in plot_data_grouped:
             fig.add_trace(
-                go.Scatter(x=group['__x'],
-                           y=group['__y'],
-                           mode='markers',
-                           opacity=alpha,
-                           marker=dict(color=group[plot_data_grouped.keys].map(color_dict),
-                                       size=size),
-                           text=group['barcode'],
-                           name=key
-                           ))
+                go.Scattergl(x=group['__x'],
+                             y=group['__y'],
+                             mode='markers',
+                             opacity=alpha,
+                             marker=dict(color=group[plot_data_grouped.keys].map(color_dict),
+                                         size=size),
+                             text=group['barcode'],
+                             name=key
+                             ))
 
         fig.update_layout(
+            hoverdistance=1,
             legend=dict(yanchor="top",
                         itemsizing='constant',
                         font=dict(
@@ -648,9 +693,9 @@ class SpatialApp:
                 'xanchor': 'center',
                 'yanchor': 'top'},
             activeshape_opacity=0.9,
-            width=float(figsize[0]) * 100,
-            height=float(figsize[1]) * 100,
-            margin=dict(l=40, r=40, t=40, b=40),
+            width=float(figsize[0]) * 125,
+            height=float(figsize[1]) * 125,
+            margin=dict(l=5, r=5, t=5, b=5),
         )
 
         if not draw_pic:
@@ -678,29 +723,30 @@ class SpatialApp:
         import plotly.express as px
 
         if pic_only:
-            return px.imshow(pic)
+            return px.imshow(pic, binary_string=True, binary_compression_level=5)
 
         if draw_pic:
-            fig = px.imshow(pic)
+            fig = px.imshow(pic, binary_string=True, binary_compression_level=5)
         else:
             fig = go.Figure()
 
         info_list = list(zip(plot_data['barcode'], plot_data[feature]))
 
         fig.add_trace(
-            go.Scatter(x=plot_data['__x'],
-                       y=plot_data['__y'],
-                       mode='markers',
-                       opacity=alpha,
-                       marker=dict(size=size,
-                                   color=plot_data[feature],
-                                   colorscale=cmap,
-                                   showscale=True),
-                       text=['barcode:{} \n value:{}'.format(str(i[0]), str(i[1])) for i in info_list]  # ,
-                       )
+            go.Scattergl(x=plot_data['__x'],
+                         y=plot_data['__y'],
+                         mode='markers',
+                         opacity=alpha,
+                         marker=dict(size=size,
+                                     color=plot_data[feature],
+                                     colorscale=cmap,
+                                     showscale=True),
+                         text=['barcode:{} \n value:{}'.format(str(i[0]), str(i[1])) for i in info_list]  # ,
+                         )
         )
 
         fig.update_layout(
+            hoverdistance=1,
             title={
                 'text': 'feature: {}'.format(feature),
                 # 'y': 0.9,
@@ -709,9 +755,9 @@ class SpatialApp:
                 'yanchor': 'top'},
 
             autosize=True,
-            width=float(figsize[0]) * 100,
-            height=float(figsize[1]) * 100,
-            margin=dict(l=40, r=40, t=40, b=40)
+            width=float(figsize[0]) * 125,
+            height=float(figsize[1]) * 125,
+            margin=dict(l=5, r=5, t=5, b=5)
         )
 
         if not draw_pic:
@@ -736,11 +782,8 @@ class SpatialTools:
             self._low_pic = None
             self._low_contain = False
 
-        self.obsm = pd.read_csv(barcodes_pos, '\t', names=['barcode', '__x', '__y'])
-
-        self.point_size = self._auto_cal_radius(self.obsm)
+        self.container = self._make_container(barcodes_pos)
         self.scalar = self._cal_zoom_rate(self._pic.shape[0], self._pic.shape[1])
-        self.level = str(self.obsm['barcode'][0]).split('_')[0]
 
         self._adata_type = None
         self._facet_pos_list = None
@@ -748,8 +791,27 @@ class SpatialTools:
     def __str__(self):
         info = 'low pic: {}\nlevel: {}\nscalar: {}'. \
             format('True' if self._low_contain else 'False',
-                   self.level, self.scalar)
+                   list(self.container.keys()), self.scalar)
         return info
+
+    def _make_container(self, barcodes_pos):
+        """{"level2": {obsm: "", point_size: ""}, "level3":{obsm: "", point_size: ""}}"""
+        container_dict = {}
+
+        if not isinstance(barcodes_pos, list):
+            barcodes_pos = [barcodes_pos]
+
+        for i in barcodes_pos:
+            obsm = pd.read_csv(i, '\t', names=['barcode', '__x', '__y'])
+            point_size = self._auto_cal_radius(obsm)
+            level = str(obsm['barcode'][0]).split('_')[0]
+            container_dict[level] = {'obsm': obsm, 'point_size': point_size}
+
+        return container_dict
+
+    @staticmethod
+    def _get_adata_level(input_adata):
+        return str(input_adata['barcode'][0]).split('_')[0]
 
     @property
     def pic(self):
@@ -769,7 +831,7 @@ class SpatialTools:
 
     def save_to(self, filename='S1000'):
         self.check_dir_exists(filename)
-        with gzip.open(filename + '.pkl.gz', 'wb') as f:
+        with gzip.open(filename + '.len', 'wb') as f:
             cPickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
     @staticmethod
@@ -970,7 +1032,11 @@ class SpatialTools:
             adata.obs.index.name = None
             adata.obs['barcode'] = adata.obs.index
             self._adata_type = 'AnnData'
-            plot_data = self.obsm.merge(adata.obs, on='barcode')
+
+            obsm = self.container[self._get_adata_level(adata.obs)]['obsm']
+            point_size = self.container[self._get_adata_level(adata.obs)]['point_size']
+
+            plot_data = obsm.merge(adata.obs, on='barcode')
 
         elif isinstance(adata, pd.DataFrame):
             adata = adata.copy()
@@ -980,7 +1046,11 @@ class SpatialTools:
                 adata['barcode'] = adata.index
 
             self._adata_type = 'DataFrame'
-            plot_data = self.obsm.merge(adata, on='barcode')
+
+            obsm = self.container[self._get_adata_level(adata)]['obsm']
+            point_size = self.container[self._get_adata_level(adata)]['point_size']
+
+            plot_data = obsm.merge(adata, on='barcode')
 
         else:
             raise 'wrong adata, should be AnnData and DataFrame'
@@ -1019,19 +1089,19 @@ class SpatialTools:
                 color_dict = {k: self._lighten_color(v, darken) for k, v in color_dict.items()}
 
             if not low_pic:
-                plot_data['__x'] = plot_data['__x'] * self.scalar
-                plot_data['__y'] = plot_data['__y'] * self.scalar
+                plot_data['__x'] = np.round(plot_data['__x'] * self.scalar, 2)
+                plot_data['__y'] = np.round(plot_data['__y'] * self.scalar, 2)
 
             else:
-                plot_data['__x'] = plot_data['__x'] * self.low_scalar
-                plot_data['__y'] = plot_data['__y'] * self.low_scalar
+                plot_data['__x'] = np.round(plot_data['__x'] * self.low_scalar, 2)
+                plot_data['__y'] = np.round(plot_data['__y'] * self.low_scalar, 2)
 
             if crop_coord:
                 plot_pic, plot_data = self._crop_coord(plot_data=plot_data, low_pic=low_pic, crop_coord=crop_coord)
             else:
                 plot_pic = self._low_pic if low_pic else self._pic
 
-            size = self.point_size ** 2 if size == 1 else self.point_size ** 2 * size
+            size = point_size ** 2 if size == 1 else point_size ** 2 * size
 
             grouped = plot_data.groupby(color)
 
@@ -1123,7 +1193,7 @@ class SpatialTools:
             if len(prob) == 0:
                 raise ValueError('wrong feature')
 
-            size = self.point_size ** 2 if size == 1 else self.point_size ** 2 * size
+            size = point_size ** 2 if size == 1 else point_size ** 2 * size
 
             plot_para_dict = {'xlabel': 'S1000 spatial 1', 'ylabel': 'S1000 spatial 2',
                               'show_ticks_and_labels': True, 'shrink': 0.4, 'pad': 0.05}
