@@ -103,6 +103,30 @@ class SpatialApp:
             return dcc.Store(data='from kwargs', id='WHITEHOLE')
 
     @classmethod
+    def return_text_replace_figure(cls, text, size):
+        return {
+            "layout": {
+                "xaxis": {
+                    "visible": False
+                },
+                "yaxis": {
+                    "visible": False
+                },
+                "annotations": [
+                    {
+                        "text": text,
+                        "xref": "paper",
+                        "yref": "paper",
+                        "showarrow": False,
+                        "font": {
+                            "size": size
+                        }
+                    }
+                ]
+            }
+        }
+
+    @classmethod
     def run_dash(cls, spatial_tools_obj=None, adata=None, port=30000, debug=False):
         from dash import Input, Output, dcc, html, exceptions, ctx, State
         import plotly.express as px
@@ -151,7 +175,7 @@ class SpatialApp:
                                 # html.H6("Card subtitle", className="card-subtitle"),
                                 html.P("Analysis and visualization of data from the S1000 sequencing platform.\n"
                                        "If you have any suggestions please contact zhangjm@biomarker.com, \nthank you!",
-                                       className="card-text",
+                                       className="card-text",style={"width": "100%"}
                                        ),
                                 dbc.CardLink("about us", href="http://www.biomarker.com.cn/about-us"),
                                 dbc.CardLink("more tools", href="https://international.biocloud.net/zh/user/login"),
@@ -487,7 +511,7 @@ class SpatialApp:
 
                 return fig
 
-            raise exceptions.PreventUpdate
+            return cls.return_text_replace_figure(text='Please select density value', size=20)
 
         @app.callback(
             Output("cluster-graph", "figure"),
@@ -546,8 +570,7 @@ class SpatialApp:
                     return_hire_pic = cls._spatial_tools_object.__dict__['_pic']
                     crop_coord = False
                 else:
-                    logging.info('3')
-                    raise exceptions.PreventUpdate
+                    return cls.return_text_replace_figure(text='Please upload a SpatialTools object', size=35)
 
             logging.info('color_by={}'.format(color_by))
             logging.info('feature={}'.format(feature))
@@ -566,24 +589,31 @@ class SpatialApp:
 
             logging.info('plotting')
 
-            if point_size is None:
+            try:
+                if point_size is None:
+                    raise exceptions.PreventUpdate
+
+                pic = cls._spatial_tools_object.s1000_spatial_plot(adata=cls._adata,
+                                                                   color=color_by,
+                                                                   feature=feature,
+                                                                   size=float(point_size),
+                                                                   cmap=cmap,
+                                                                   groups=list(groups) if groups else groups,
+                                                                   crop_coord=crop_coord,
+                                                                   draw_pic=draw_pic,
+                                                                   low_pic=low_pic,
+                                                                   pic_only=pic_only,
+                                                                   alpha=alpha,
+                                                                   interactive=True)
+
+                logging.info('end')
+                pic.update_layout(uirevision=True)
+
+                return pic
+
+            except:
+
                 raise exceptions.PreventUpdate
-
-            pic = cls._spatial_tools_object.s1000_spatial_plot(adata=cls._adata,
-                                                               color=color_by,
-                                                               feature=feature,
-                                                               size=float(point_size),
-                                                               cmap=cmap,
-                                                               groups=list(groups) if groups else groups,
-                                                               crop_coord=crop_coord,
-                                                               draw_pic=draw_pic,
-                                                               low_pic=low_pic,
-                                                               pic_only=pic_only,
-                                                               alpha=alpha,
-                                                               interactive=True)
-            pic.update_layout(uirevision=True)
-
-            return pic
 
         logging.info('listen: http://127.0.0.1:{}/'.format(port))
         app.run_server(debug=debug, mode='external', port=port, host='127.0.0.1')
