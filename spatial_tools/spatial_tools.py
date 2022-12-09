@@ -58,6 +58,8 @@ class SpatialApp:
     _feature_info = None
     _color_by_info = None
 
+    _adata_container = {}
+
     @classmethod
     def color_by_dropdown(cls):
         from dash import dcc, html
@@ -102,8 +104,8 @@ class SpatialApp:
         else:
             return dcc.Store(data='from kwargs', id='WHITEHOLE')
 
-    @classmethod
-    def return_text_replace_figure(cls, text, size):
+    @staticmethod
+    def return_text_replace_figure(text, size):
         return {
             "layout": {
                 "xaxis": {
@@ -175,7 +177,7 @@ class SpatialApp:
                                 # html.H6("Card subtitle", className="card-subtitle"),
                                 html.P("Analysis and visualization of data from the S1000 sequencing platform.\n"
                                        "If you have any suggestions please contact zhangjm@biomarker.com, \nthank you!",
-                                       className="card-text",style={"width": "100%"}
+                                       className="card-text", style={"width": "100%"}
                                        ),
                                 dbc.CardLink("about us", href="http://www.biomarker.com.cn/about-us"),
                                 dbc.CardLink("more tools", href="https://international.biocloud.net/zh/user/login"),
@@ -197,7 +199,9 @@ class SpatialApp:
                                 du.Upload(
                                     id='upload_adata',
                                     text='pd.DataFrame or AnnData',
-                                    filetypes=['csv', 'h5ad', 'loom', 'xls']
+                                    max_files=15,
+                                    filetypes=['csv', 'h5ad', 'loom', 'xls'],
+
                                 ),
                                 html.Div(id='callback-output2')
                             ], md=7)
@@ -205,26 +209,41 @@ class SpatialApp:
                     ], title="Upload object"),
                     dbc.AccordionItem([
                         dbc.Row([
-                            dbc.Col([
+                            html.Div([
+                                html.Label('Select adata'),
+                                dcc.Dropdown(
+                                    id='selected_adata')
+                            ], style={'display': 'inline-block',
+                                      'width': '95%'}),
+                        ]),
+
+                        html.Br(),
+
+                        dbc.Row([
+
+                            html.Div([
                                 html.Label('set He figure'),
                                 dcc.Dropdown(
                                     ['low He', 'no He', 'hire He', 'only He'],
                                     'low He',
-                                    id='pic_data',
-                                    style={'width': 120}
-                                )], md=4),
-                            dbc.Col([
+                                    id='pic_data')
+                            ], style={'display': 'inline-block',
+                                      'width': '25%',
+                                      "margin-left": "2px"}),
+
+                            html.Div([
                                 html.Label('Point size'),
                                 dbc.Input(
                                     id='point_size',
                                     type="number",
                                     placeholder="point size",
                                     min=0.000001,
-                                    value=1,
-                                    style={'width': 80}
+                                    value=1
                                 )
-                            ], style={'margin-left': '15px'}, md=3),
-                            dbc.Col([
+                            ], style={'display': 'inline-block',
+                                      'width': '20%'}),
+
+                            html.Div([
                                 dcc.Slider(
                                     min=0,
                                     max=1,
@@ -233,10 +252,12 @@ class SpatialApp:
                                     marks={0: {'label': 'min', 'style': {'color': '#77b0b1'}},
                                            0.5: {'label': 'point alpha'},
                                            1: {'label': 'max', 'style': {'color': '#f50'}}},
-                                    tooltip={"placement": "top", "always_visible": True},
-                                )
-                            ], md=3, style={'margin-left': '3px', 'width': 150})]
-                        )
+                                    tooltip={"placement": "top", "always_visible": True})
+                            ], style={'display': 'inline-block',
+                                      'width': '50%', })
+
+                        ], align='center')
+
                     ], title='Basic setting'),
                     dbc.AccordionItem([
                         html.Div(cls.color_by_dropdown(),
@@ -296,37 +317,133 @@ class SpatialApp:
                         ])
                     ], title='Cropping coord'),
                     dbc.AccordionItem([
+
+                        dbc.Tabs([
+                            dbc.Tab(dbc.Card(
+                                dbc.CardBody(
+                                    [
+                                        dbc.Button("Download selected", id="selected_barcodes", className="me-1"),
+                                        dcc.Download(id="download-text-index"),
+                                        html.Br(),
+                                        html.Br(),
+                                        html.Div(id='selected-data',
+                                                 style=cls.styles['pre'],
+                                                 children='Please using lasso or box select ...')
+                                    ]
+                                ),
+                                className="mt-3",
+                            ), label="get barcodes"),
+
+                            dbc.Tab(dbc.Card(
+                                dbc.CardBody(
+                                    [
+                                        dbc.Row([
+                                            dbc.Col([
+                                                html.Div([
+                                                    html.Label('cluster labels'),
+                                                    dbc.Input(id='cluster-labels',
+                                                              type="text",
+                                                              placeholder="cluster lable",
+                                                              value='cluster')
+                                                ], style={'display': 'inline-block',
+                                                          'width': '90%'})
+                                            ], width="auto"),
+
+                                            dbc.Col([
+                                                html.Label('cluster-method'),
+                                                dcc.Dropdown(['leiden', 'louvain'], 'leiden', id='cluster-method')
+                                            ],
+                                                style={'display': 'inline-block',
+                                                       # 'margin-left': '1px',
+                                                       'width': '30%'}, width="auto"),
+                                        ], className="g-0"),
+
+                                        html.Br(),
+
+                                        dbc.Row([
+                                            html.Div([
+                                                html.Label('n_PCAs'),
+                                                dbc.Input(id='n_PCAs',
+                                                          type="number",
+                                                          placeholder="n_PCAs",
+                                                          min=15,
+                                                          value=50)
+
+                                            ], style={'display': 'inline-block',
+                                                      'width': '30%'}),
+
+                                            html.Div([
+                                                html.Label('resolution'),
+                                                dbc.Input(id='resolution',
+                                                          type="number",
+                                                          placeholder="resolution",
+                                                          min=0.001,
+                                                          max=5,
+                                                          value=0.5)
+
+                                            ], style={'display': 'inline-block',
+                                                      'width': '30%'})
+                                        ], style={'no_gutters': True}),
+
+                                        html.Br(),
+
+                                        dbc.Row([
+
+                                            html.Div([
+                                                html.Label('highly-variable genes'),
+                                                dbc.Input(id='n_top_genes',
+                                                          type="number",
+                                                          placeholder="point size",
+                                                          min=1,
+                                                          value=2000)
+                                            ], style={'display': 'inline-block',
+                                                      'width': '42%'}),
+
+                                            html.Div([
+                                                html.Label('n_neighbors'),
+                                                dbc.Input(id='n_neighbors',
+                                                          type="number",
+                                                          placeholder="point size",
+                                                          min=2,
+                                                          max=100,
+                                                          value=15)
+                                            ], style={'display': 'inline-block',
+                                                      'width': '30%'})
+                                        ]),
+
+                                        html.Br(),
+
+                                        dbc.Button("re-clustering",
+                                                   id="Re-cluster",
+                                                   className="me-1",
+                                                   color='success',
+                                                   external_link=True,
+                                                   style={'width': 120}
+                                                   ),
+
+                                        dcc.Download(id='down-load-re-clustered-h5ad'),
+                                        dcc.Loading(
+                                            children=[html.Div([html.Div(id="loading-clustering")])],
+                                            type="circle",
+                                            fullscreen=True,
+                                        ),
+                                    ]
+                                ),
+                                className="mt-3",
+                            ), label="re-clustering")
+                        ]),
+
                         dbc.Row([
                             html.Div([
-                                dbc.Button("Download selected", id="selected_barcodes", className="me-1"
-                                           # style={'font-size': '10px',
-                                           #        'width': 100,
-                                           #        'height':30,
-                                           #        'display': 'inline-block'}
-                                           ),
-                                dcc.Download(id="download-text-index"),
-
-                                dbc.Button("re-clustering",
-                                           id="Re-cluster",
-                                           className="me-1",
-                                           color='success',
-                                           external_link=True
-                                           # style={'font-size': '12px',
-                                           #        'display': 'inline-block',
-                                           #        'margin-left': '15px',
-                                           #        'width': 105}
-                                           ),
-                                dcc.Download(id='down-load-re-clustered-h5ad')
 
                             ], className="d-grid gap-2 d-md-flex justify-content-md-left"),
                         ]),
                         html.Br(),
                         dbc.Row([
-                            html.Div(id='selected-data',
-                                     style=cls.styles['pre'],
-                                     children='Please using lasso or box select ...')
+
                         ])
-                    ], title='Selected barcodes')
+                    ], title='Selected barcodes'),
+                    dbc.AccordionItem([], title='Small tools')
                 ], always_open=True),
 
             ],
@@ -358,7 +475,7 @@ class SpatialApp:
         )
         def upload_adata(status: du.UploadStatus):
             logging.info('upload adata {} done'.format(str(status.latest_file)))
-            return str(status.latest_file)
+            return [str(_) for _ in status.uploaded_files]
 
         @du.callback(
             Output('WHITEHOLE', 'data'),
@@ -370,29 +487,50 @@ class SpatialApp:
             return str(status.latest_file)
 
         @app.callback(
+            Output('selected_adata', 'options'),
+            Input('BLACKHOLE', 'data')
+        )
+        def list_adata(adata_list):
+            if not adata_list:
+                raise exceptions.PreventUpdate
+
+            for file in adata_list:
+                if Path(file).suffix in ['.xls', '.csv']:
+                    _adata = pd.read_csv(str(file), sep='\t')
+
+                    logging.info('reading upload data as Pandas')
+                else:
+                    if Path(file).suffix == '.loom':
+                        _adata = sc.read_loom(file)
+                    else:
+                        _adata = ad.read_h5ad(file)
+
+                cls._adata_container[Path(file).name] = _adata
+
+            return list(cls._adata_container.keys())
+
+        @app.callback(
             [Output('color_by', 'options'),
              Output('density_by', 'options'),
              Output('feature', 'options')],
-            Input('BLACKHOLE', 'data')
+            Input('selected_adata', 'value')
         )
-        def get_adata(adata_path: Path):
+        def get_adata(selected_adata):
 
-            if not adata_path:
+            if not selected_adata:
                 raise exceptions.PreventUpdate
 
-            if Path(adata_path).suffix in ['.xls', '.csv']:
-                _adata = pd.read_csv(str(adata_path), sep='\t')
+            _adata = cls._adata_container[selected_adata]
+
+            if isinstance(_adata, pd.DataFrame):
                 cls._adata = _adata
                 cls._meta_data = _adata
                 cls._feature_info = _adata.columns
                 cls._color_by_info = _adata.columns
                 logging.info('reading upload data as Pandas')
 
+
             else:
-                if Path(adata_path).suffix == '.loom':
-                    _adata = sc.read_loom(adata_path)
-                else:
-                    _adata = ad.read_h5ad(adata_path)
 
                 cls._adata = _adata
                 cls._meta_data = _adata.obs
@@ -427,17 +565,33 @@ class SpatialApp:
                 raise exceptions.PreventUpdate
 
         @app.callback(
-            Output('down-load-re-clustered-h5ad', 'data'),
+            [Output('down-load-re-clustered-h5ad', 'data'),
+             Output('loading-clustering', 'children')
+             ],
             [Input('Re-cluster', 'n_clicks'),
-             Input('cluster-graph', 'selectedData')],
+             Input('cluster-graph', 'selectedData'),
+             Input('cluster-labels', 'value'),
+             Input('cluster-method', 'value'),
+             Input('n_PCAs', 'value'),
+             Input('resolution', 'value'),
+             Input('n_top_genes', 'value'),
+             Input('n_neighbors', 'value')
+             ],
             prevent_initial_call=True,
 
         )
-        def re_cluster(n_clicks, selectedData):
-            output_data = '__cache__/selected_barcodes_reclustered.h5ad'
+        def re_cluster(n_clicks, selectedData, cluster_labels, method, n_PCAs, resolution, n_top_genes, n_neighbors):
+            output_data = '__cache__/results.h5ad'
             SpatialTools.check_dir_exists(output_data)
 
             if n_clicks is None:
+                raise exceptions.PreventUpdate
+
+            if not cluster_labels and not method and not n_PCAs and \
+                    not resolution and not n_top_genes and not n_neighbors:
+
+                logging.info('(---- >  tmp')
+
                 raise exceptions.PreventUpdate
 
             elif ctx.triggered_id == 'Re-cluster' and selectedData and isinstance(cls._adata, anndata.AnnData):
@@ -447,18 +601,29 @@ class SpatialApp:
                 with open(output_data, 'w') as f:
                     f.write('hello dash!\n')
 
+                # sc.pp.normalize_total(adata, inplace=True)
+                # sc.pp.log1p(adata)
+                # sc.pp.highly_variable_genes(adata, flavor="seurat", n_top_genes=2000)
+                # sc.pp.pca(adata, n_comps)
+
                 seleceted_barcodes = resolve_selected_data(selectedData)
-                _adata = cls._adata[seleceted_barcodes, :]
+                _adata = cls._adata[seleceted_barcodes, :].copy()
+
                 sc.pp.normalize_total(_adata, inplace=True)
                 sc.pp.log1p(_adata)
-                sc.pp.highly_variable_genes(_adata, flavor="seurat", n_top_genes=2000)
-                sc.pp.pca(_adata)
-                sc.pp.neighbors(_adata)
-                sc.tl.leiden(_adata, key_added="clusters")
+                sc.pp.highly_variable_genes(_adata, flavor="seurat", n_top_genes=n_top_genes)
+                sc.pp.pca(_adata, n_comps=n_PCAs)
+                sc.pp.neighbors(_adata, n_neighbors=n_neighbors)
+
+                if method == 'leiden':
+                    sc.tl.leiden(_adata, key_added=cluster_labels, resolution=resolution)
+
+                else:
+                    sc.tl.louvain(_adata, key_added=cluster_labels, resolution=resolution)
 
                 _adata.write_h5ad(output_data)
 
-                return dcc.send_file(output_data)
+                return dcc.send_file(output_data), None
 
             else:
                 raise exceptions.PreventUpdate
