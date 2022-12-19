@@ -1,9 +1,3 @@
-#!/share/nas2/genome/biosoft/Python//3.7.3/bin/python3
-# -*- coding: utf-8 -*-
-# @Time : 2022/12/5 16:57
-# @Author : jmzhang
-# @Email : zhangjm@biomarker.com.cn
-
 # !/share/nas2/genome/biosoft/Python//3.7.3/bin/python3
 # -*- coding: utf-8 -*-
 # @Time : 2022/10/21 11:27
@@ -140,11 +134,8 @@ class SpatialApp:
     @classmethod
     def run_dash(cls, spatial_tools_obj=None, adata=None, port=30000, debug=False):
         from dash import Input, Output, dcc, html, exceptions, ctx, State
-        import dash_loading_spinners as dls
         import plotly.express as px
         import dash_uploader as du
-        import uuid
-        # import dash_daq as daq
         import dash_bootstrap_components as dbc
 
         from jupyter_dash import JupyterDash
@@ -624,7 +615,7 @@ class SpatialApp:
                         dbc.Row(
                             [
                                 # dbc.Col(html.Img(src=PLOTLY_LOGO, height="30px")),
-                                dbc.Col(dbc.NavbarBrand("SpatialTools v2.1.1"),
+                                dbc.Col(dbc.NavbarBrand("SpatialTools v2.1.2"),
                                         style={"margin-left": "20px", 'fontsize': '10px'}),
                             ],
                             align="center",
