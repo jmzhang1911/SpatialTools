@@ -58,6 +58,8 @@ class SpatialApp:
     _feature_info = None
     _color_by_info = None
 
+    _adata_container = {}
+
     @classmethod
     def color_by_dropdown(cls):
         from dash import dcc, html
@@ -102,9 +104,43 @@ class SpatialApp:
         else:
             return dcc.Store(data='from kwargs', id='WHITEHOLE')
 
+    @staticmethod
+    def return_text_replace_figure(text, size):
+        return {
+            "layout": {
+                "xaxis": {
+                    "visible": False
+                },
+                "yaxis": {
+                    "visible": False
+                },
+                "annotations": [
+                    {
+                        "text": text,
+                        "xref": "paper",
+                        "yref": "paper",
+                        "showarrow": False,
+                        "font": {
+                            "size": size
+                        }
+                    }
+                ]
+            }
+        }
+
+    @staticmethod
+    def layout_figure(figure):
+        figure.update_layout(width=1000,
+                             height=1000,
+                             autosize=True,
+                             margin=dict(l=5, r=5, t=5, b=5))
+
+        return figure
+
     @classmethod
     def run_dash(cls, spatial_tools_obj=None, adata=None, port=30000, debug=False):
         from dash import Input, Output, dcc, html, exceptions, ctx, State
+        import dash_loading_spinners as dls
         import plotly.express as px
         import dash_uploader as du
         import uuid
@@ -138,7 +174,7 @@ class SpatialApp:
             cls._feature_info = adata.var.index
             cls._color_by_info = adata.obs.columns
 
-        controls = dbc.Card(
+        controls = html.Div(
 
             [
                 dcc.Store(id='BLACKHOLE'),
@@ -151,7 +187,7 @@ class SpatialApp:
                                 # html.H6("Card subtitle", className="card-subtitle"),
                                 html.P("Analysis and visualization of data from the S1000 sequencing platform.\n"
                                        "If you have any suggestions please contact zhangjm@biomarker.com, \nthank you!",
-                                       className="card-text",
+                                       className="card-text", style={"width": "100%"}
                                        ),
                                 dbc.CardLink("about us", href="http://www.biomarker.com.cn/about-us"),
                                 dbc.CardLink("more tools", href="https://international.biocloud.net/zh/user/login"),
@@ -164,43 +200,69 @@ class SpatialApp:
                             dbc.Col([
                                 du.Upload(
                                     id='upload_spatial_tools',
-                                    text='SpatialTools obj',
+                                    text='SpatialTools-object\n(.len)',
                                     filetypes=['pickle', 'gz', 'pkl', 'len']
                                 ),
-                                html.Div(id='callback-output')
+
                             ], md=5),
                             dbc.Col([
                                 du.Upload(
                                     id='upload_adata',
-                                    text='pd.DataFrame or AnnData',
-                                    filetypes=['csv', 'h5ad', 'loom', 'xls']
+                                    text='data\n(.h5ad, .loom, .xls, .csv)',
+                                    max_files=20,
+                                    filetypes=['csv', 'h5ad', 'loom', 'xls'],
+
                                 ),
-                                html.Div(id='callback-output2')
+
                             ], md=7)
                         ], align='center'),
+                        dbc.Row([
+                            dbc.Col([
+                                html.Div(id='callback-output'),
+                            ]),
+                            dbc.Col([
+                                html.Div(id='callback-output2')
+                            ])
+                        ]
+                        )
                     ], title="Upload object"),
                     dbc.AccordionItem([
                         dbc.Row([
-                            dbc.Col([
-                                html.Label('set He figure'),
+                            html.Div([
+                                html.Label('Select data'),
+                                dcc.Dropdown(
+                                    id='selected_adata')
+                            ], style={'display': 'inline-block',
+                                      'width': '95%'}),
+                        ]),
+
+                        html.Br(),
+
+                        dbc.Row([
+
+                            html.Div([
+                                html.Label('set He'),
                                 dcc.Dropdown(
                                     ['low He', 'no He', 'hire He', 'only He'],
                                     'low He',
-                                    id='pic_data',
-                                    style={'width': 120}
-                                )], md=4),
-                            dbc.Col([
+                                    id='pic_data')
+                            ], style={'display': 'inline-block',
+                                      'width': '30%',
+                                      "margin-left": "2px"}),
+
+                            html.Div([
                                 html.Label('Point size'),
                                 dbc.Input(
                                     id='point_size',
                                     type="number",
                                     placeholder="point size",
                                     min=0.000001,
-                                    value=1,
-                                    style={'width': 80}
+                                    value=1
                                 )
-                            ], style={'margin-left': '15px'}, md=3),
-                            dbc.Col([
+                            ], style={'display': 'inline-block',
+                                      'width': '30%'}),
+
+                            html.Div([
                                 dcc.Slider(
                                     min=0,
                                     max=1,
@@ -209,10 +271,12 @@ class SpatialApp:
                                     marks={0: {'label': 'min', 'style': {'color': '#77b0b1'}},
                                            0.5: {'label': 'point alpha'},
                                            1: {'label': 'max', 'style': {'color': '#f50'}}},
-                                    tooltip={"placement": "top", "always_visible": True},
-                                )
-                            ], md=3, style={'margin-left': '3px', 'width': 150})]
-                        )
+                                    tooltip={"placement": "top", "always_visible": True})
+                            ], style={'display': 'inline-block',
+                                      'width': '30%', })
+
+                        ], align='center')
+
                     ], title='Basic setting'),
                     dbc.AccordionItem([
                         html.Div(cls.color_by_dropdown(),
@@ -272,55 +336,336 @@ class SpatialApp:
                         ])
                     ], title='Cropping coord'),
                     dbc.AccordionItem([
-                        dbc.Row([
-                            html.Div([
-                                dbc.Button("Download selected", id="selected_barcodes", className="me-1"
-                                           # style={'font-size': '10px',
-                                           #        'width': 100,
-                                           #        'height':30,
-                                           #        'display': 'inline-block'}
-                                           ),
-                                dcc.Download(id="download-text-index"),
+                        dbc.Tabs([
+                            dbc.Tab(dbc.Card(
+                                dbc.CardBody(
+                                    [
+                                        dbc.Button("Download selected", id="selected_barcodes", className="me-1"),
+                                        dcc.Download(id="download-text-index"),
+                                        html.Br(),
+                                        html.Br(),
+                                        html.Div(id='selected-data',
+                                                 style=cls.styles['pre'],
+                                                 children='Please using lasso or box select ...')
+                                    ]
+                                ),
+                                className="mt-3",
+                            ), label="get barcodes"),
 
-                                dbc.Button("re-clustering",
-                                           id="Re-cluster",
-                                           className="me-1",
-                                           color='success',
-                                           external_link=True
-                                           # style={'font-size': '12px',
-                                           #        'display': 'inline-block',
-                                           #        'margin-left': '15px',
-                                           #        'width': 105}
-                                           ),
-                                dcc.Download(id='down-load-re-clustered-h5ad')
+                            dbc.Tab(dbc.Card(
+                                dbc.CardBody(
+                                    [
+                                        dbc.Row([
+                                            dbc.Col([
+                                                html.Div([
+                                                    html.Label('cluster labels'),
+                                                    dbc.Input(id='cluster-labels',
+                                                              type="text",
+                                                              placeholder="cluster lable",
+                                                              value='cluster')
+                                                ], style={'display': 'inline-block',
+                                                          'width': '90%'})
+                                            ], width="auto"),
 
-                            ], className="d-grid gap-2 d-md-flex justify-content-md-left"),
+                                            dbc.Col([
+                                                html.Label('cluster-method'),
+                                                dcc.Dropdown(['leiden', 'louvain'], 'leiden', id='cluster-method')
+                                            ],
+                                                style={'display': 'inline-block',
+                                                       # 'margin-left': '1px',
+                                                       'width': '30%'}, width="auto"),
+                                        ], className="g-0"),
+
+                                        html.Br(),
+
+                                        dbc.Row([
+                                            html.Div([
+                                                html.Label('n_neighbors'),
+                                                dbc.Input(id='n_neighbors',
+                                                          type="number",
+                                                          placeholder="point size",
+                                                          min=2,
+                                                          max=100,
+                                                          value=15)
+                                            ], style={'display': 'inline-block',
+                                                      'width': '30%'}),
+
+                                            html.Div([
+                                                html.Label('resolution'),
+                                                dbc.Input(id='resolution',
+                                                          type="number",
+                                                          placeholder="resolution",
+                                                          min=0.001,
+                                                          max=5,
+                                                          value=0.5)
+
+                                            ], style={'display': 'inline-block',
+                                                      'width': '30%'})
+                                        ], style={'no_gutters': True}),
+
+                                        html.Br(),
+
+                                        dbc.Row([
+
+                                            html.Div([
+                                                html.Label('highly-variable genes'),
+                                                dbc.Input(id='n_top_genes',
+                                                          type="number",
+                                                          placeholder="point size",
+                                                          min=1,
+                                                          value=2000)
+                                            ], style={'display': 'inline-block',
+                                                      'width': '50%'}),
+
+                                            html.Div([
+                                                html.Label('n_PCAs'),
+                                                dbc.Input(id='n_PCAs',
+                                                          type="number",
+                                                          placeholder="n_PCAs",
+                                                          min=15,
+                                                          value=50)
+
+                                            ], style={'display': 'inline-block',
+                                                      'width': '25%'})
+
+                                        ]),
+
+                                        html.Br(),
+
+                                        dbc.Button("re-clustering",
+                                                   id="Re-cluster",
+                                                   className="me-1",
+                                                   color='success',
+                                                   external_link=True,
+                                                   style={'width': 120}
+                                                   ),
+
+                                        dcc.Download(id='down-load-re-clustered-h5ad'),
+
+                                        html.Br(),
+
+                                        dcc.Loading(
+                                            children=[html.Div([html.Div(id="loading-clustering")])],
+                                            type="circle",
+                                            # fullscreen=True,
+                                        ),
+
+                                        html.Br(),
+                                        html.Br(),
+                                        html.Br(),
+                                        html.Br(),
+
+                                    ]
+                                ),
+                                className="mt-3",
+                            ), label="re-clustering")
                         ]),
+
                         html.Br(),
                         dbc.Row([
-                            html.Div(id='selected-data',
-                                     style=cls.styles['pre'],
-                                     children='Please using lasso or box select ...')
+
                         ])
-                    ], title='Selected barcodes')
+                    ], title='Selected barcodes'),
+                    dbc.AccordionItem([
+                        dbc.Tabs([
+                            dbc.Tab(dbc.Card(
+                                dbc.CardBody([
+                                    dcc.Store(id='mtx_dir_path'),
+                                    du.Upload(
+                                        id='make_h5ad_file',
+                                        text='upload barcodes.tsv.gz, features.tsv.gz and matrix.mtx.gz',
+                                        filetypes=['gz'],
+                                        max_files=3
+                                    ),
+
+                                    html.Br(),
+
+                                    html.Div([
+                                        html.Label('sample name'),
+                                        dbc.Input(id='sample_name',
+                                                  required=True,
+                                                  value='sample',
+                                                  type="text",
+                                                  placeholder="sample name")
+                                    ], style={'display': 'inline-block',
+                                              'width': '90%'}),
+
+                                    html.Br(),
+                                    html.Br(),
+
+                                    dbc.Button("making .h5ad",
+                                               id="run_make_h5ad",
+                                               className="me-1",
+                                               color='success',
+                                               external_link=True,
+                                               style={'width': 120}
+                                               ),
+                                    dcc.Download(id='download-h5ad'),
+                                    dcc.Loading(
+                                        children=[html.Div([html.Div(id="making h5ad")])],
+                                        type="circle",
+                                    ),
+
+                                    html.Br(),
+                                    html.Br(),
+                                    html.Br()
+
+                                ]), className="mt-3"
+                            ), label="make .h5ad"),
+
+                            dbc.Tab(dbc.Card(
+                                dbc.CardBody([
+                                    dcc.Store(id='upload_tiff_file'),
+                                    dcc.Store(id='upload_png_file'),
+                                    dcc.Store(id='upload_pos_files'),
+
+                                    dbc.Row([
+                                        html.Div([
+                                            du.Upload(
+                                                id='tiff_file',
+                                                text='upload he_roi.tif',
+                                                filetypes=['tiff', 'tif'],
+                                                max_files=1,
+                                            )
+                                        ], style={'width': 150}),
+
+                                        html.Div([
+                                            du.Upload(
+                                                id='png_file',
+                                                text='upload he_roi_small.png',
+                                                filetypes=['png'],
+                                                max_files=1
+                                            )
+                                        ], style={'width': 150}),
+
+                                        html.Div([
+                                            du.Upload(
+                                                id='pos_files',
+                                                text='upload barcodes_pos.tsv.gz',
+                                                filetypes=['gz', 'tsv'],
+                                                max_files=10
+                                            )
+                                        ], style={'width': 150})
+                                    ]),
+
+                                    html.Br(),
+                                    html.Br(),
+
+                                    dbc.Button("making .len",
+                                               id="run_make_len",
+                                               className="me-1",
+                                               color='success',
+                                               external_link=True,
+                                               style={'width': 120}
+                                               ),
+                                    dcc.Download(id='download-len'),
+                                    dcc.Loading(
+                                        children=[html.Div([html.Div(id="making-len")])],
+                                        type="circle",
+                                    ),
+
+                                    html.Br(),
+                                    html.Br(),
+                                    html.Br()
+
+                                ], className="mt-3")
+                            ), label='make .len'),
+
+                            dbc.Tab(dbc.Card(
+                                dbc.CardBody([
+
+                                    dbc.Row([
+                                        html.Label("choice .h5ad"),
+                                        dcc.Dropdown(
+                                            id='choice-h5ad',
+                                        )
+                                    ]),
+                                    html.Br(),
+                                    dbc.Row([
+                                        html.Label("choice .xls"),
+                                        dcc.Dropdown(
+                                            id='choice-others'
+                                        )
+                                    ]),
+                                    html.Br(),
+                                    dbc.Button("merge",
+                                               id="run_merge",
+                                               className="me-1",
+                                               color='success',
+                                               external_link=True,
+                                               style={'width': 120}
+                                               ),
+                                    dcc.Download(id='download-merge'),
+                                    dcc.Loading(
+                                        children=[html.Div([html.Div(id="making merge")])],
+                                        type="circle",
+                                    ),
+
+                                    html.Br(),
+                                    html.Br(),
+                                    html.Br()
+
+                                ], className="mt-3"),
+                            ), label="merge data")
+                        ]),
+
+                    ], title='Small tools')
                 ], always_open=True),
 
             ],
-            body=True, style={"padding": "10px", "font_color": "white", 'bg_color': '#85002D'}
+            # body=True, style={"padding": "10px", "font_color": "white", 'bg_color': '#85002D'}
         )
 
         app.layout = dbc.Container(
             [
-                html.H1("Spatial Tools For Vision beta v0.1.5", style={'textAlign': 'center', 'color': '#20B2AA'}),
-                html.Hr(),
+                dbc.Navbar([
+                    html.A(
+                        # Use row and col to control vertical alignment of logo / brand
+                        dbc.Row(
+                            [
+                                # dbc.Col(html.Img(src=PLOTLY_LOGO, height="30px")),
+                                dbc.Col(dbc.NavbarBrand("SpatialTools v2.1.1"),
+                                        style={"margin-left": "20px", 'fontsize': '10px'}),
+                            ],
+                            align="center",
+                            className="g-0",
+                        ),
+                        href="https://plotly.com",
+                        style={"textDecoration": "none"},
+                    )
+                ], color="dark", dark=True, style={'height': '60px'}),
+
+                # html.H1("Spatial Tools For Vision beta v0.1.5", style={'textAlign': 'center', 'color': '#20B2AA'}),
+                html.Br(),
                 dbc.Row(
                     [
                         dbc.Col(controls,
                                 md=3,
-                                style={'height': '80vh'}),
-                        dbc.Col(dcc.Graph(id="cluster-graph",
-                                          style={'width': '65vh', 'height': '65vh'}),
-                                md=6)
+                                # style={'height': '80vh'}
+                                ),
+                        dbc.Col([
+                            dcc.Loading([
+
+                                dcc.Graph(id="cluster-graph")], style={'width': 100})
+                            # html.Div([
+                            #     dcc.Loading(
+                            #         children=[html.Div([html.Div(id="holding")])],
+                            #         type="circle",
+                            #     )
+                            # ]
+                            # )
+                            # dls.Hash(dcc.Graph(id="cluster-graph",
+                            #                    # style={'width': '65vh', 'height': '65vh'}
+                            #                    ),
+                            #
+                            #         # x='',
+                            #          color="#E50B0B",
+                            #          speed_multiplier=2,
+                            #          size=100)
+
+                        ]
+
+                            , md=6)
                     ],
                     align="center",
                 ),
@@ -334,30 +679,61 @@ class SpatialApp:
         )
         def upload_adata(status: du.UploadStatus):
             logging.info('upload adata {} done'.format(str(status.latest_file)))
-            return str(status.latest_file)
+            return [str(_) for _ in status.uploaded_files]
 
         @du.callback(
-            Output('WHITEHOLE', 'data'),
+            [Output('WHITEHOLE', 'data'),
+             Output('callback-output', 'children')],
             id='upload_spatial_tools'
         )
         def upload_spatial_tools_obj(status: du.UploadStatus):
             logging.info('upload  spatial_tools.SpatialTools {} done'.format(str(status.latest_file)))
             cls._spatial_tools_object = SpatialTools.load_from(str(status.latest_file))
-            return str(status.latest_file)
+            level_info = 'levels: ' + ', '.join(list(cls._spatial_tools_object.container.keys()))
+
+            return str(status.latest_file), level_info
+
+        @app.callback(
+            [Output('selected_adata', 'options'),
+             Output('callback-output2', 'children')],
+            Input('BLACKHOLE', 'data')
+        )
+        def list_adata(adata_list):
+            if not adata_list:
+                cls._adata_container = {}
+                raise exceptions.PreventUpdate
+
+            for file in adata_list:
+                if Path(file).suffix in ['.xls', '.csv']:
+                    _adata = pd.read_csv(str(file), sep='\t')
+
+                    logging.info('reading upload data as Pandas')
+                else:
+                    if Path(file).suffix == '.loom':
+                        _adata = sc.read_loom(file)
+                    else:
+                        _adata = ad.read_h5ad(file)
+
+                cls._adata_container[Path(file).name] = _adata
+
+            for_options = list(cls._adata_container.keys())
+
+            return for_options, 'uploaded: {} files'.format(len(for_options))
 
         @app.callback(
             [Output('color_by', 'options'),
              Output('density_by', 'options'),
              Output('feature', 'options')],
-            Input('BLACKHOLE', 'data')
+            Input('selected_adata', 'value')
         )
-        def get_adata(adata_path: Path):
+        def get_adata(selected_adata):
 
-            if not adata_path:
+            if not selected_adata:
                 raise exceptions.PreventUpdate
 
-            if Path(adata_path).suffix in ['.xls', '.csv']:
-                _adata = pd.read_csv(str(adata_path), sep='\t')
+            _adata = cls._adata_container[selected_adata]
+
+            if isinstance(_adata, pd.DataFrame):
                 cls._adata = _adata
                 cls._meta_data = _adata
                 cls._feature_info = _adata.columns
@@ -365,10 +741,6 @@ class SpatialApp:
                 logging.info('reading upload data as Pandas')
 
             else:
-                if Path(adata_path).suffix == '.loom':
-                    _adata = sc.read_loom(adata_path)
-                else:
-                    _adata = ad.read_h5ad(adata_path)
 
                 cls._adata = _adata
                 cls._meta_data = _adata.obs
@@ -403,17 +775,34 @@ class SpatialApp:
                 raise exceptions.PreventUpdate
 
         @app.callback(
-            Output('down-load-re-clustered-h5ad', 'data'),
+            [Output('down-load-re-clustered-h5ad', 'data'),
+             Output('loading-clustering', 'children')
+             ],
             [Input('Re-cluster', 'n_clicks'),
-             Input('cluster-graph', 'selectedData')],
+             Input('cluster-graph', 'selectedData'),
+             Input('cluster-labels', 'value'),
+             Input('cluster-method', 'value'),
+             Input('n_PCAs', 'value'),
+             Input('resolution', 'value'),
+             Input('n_top_genes', 'value'),
+             Input('n_neighbors', 'value')
+             ],
             prevent_initial_call=True,
 
         )
-        def re_cluster(n_clicks, selectedData):
-            output_data = '__cache__/selected_barcodes_reclustered.h5ad'
+        def re_cluster(n_clicks,
+                       selectedData,
+                       cluster_labels, method, n_PCAs, resolution, n_top_genes, n_neighbors):
+            output_data = '__cache__/results.h5ad'
             SpatialTools.check_dir_exists(output_data)
 
             if n_clicks is None:
+                logging.info('---- >  tmp 1')
+                raise exceptions.PreventUpdate
+
+            if not cluster_labels and not method and not n_PCAs and \
+                    not resolution and not n_top_genes and not n_neighbors:
+
                 raise exceptions.PreventUpdate
 
             elif ctx.triggered_id == 'Re-cluster' and selectedData and isinstance(cls._adata, anndata.AnnData):
@@ -423,18 +812,183 @@ class SpatialApp:
                 with open(output_data, 'w') as f:
                     f.write('hello dash!\n')
 
+                # sc.pp.normalize_total(adata, inplace=True)
+                # sc.pp.log1p(adata)
+                # sc.pp.highly_variable_genes(adata, flavor="seurat", n_top_genes=2000)
+                # sc.pp.pca(adata, n_comps)
+
                 seleceted_barcodes = resolve_selected_data(selectedData)
-                _adata = cls._adata[seleceted_barcodes, :]
+                _adata = cls._adata[seleceted_barcodes, :].copy()
+
                 sc.pp.normalize_total(_adata, inplace=True)
                 sc.pp.log1p(_adata)
-                sc.pp.highly_variable_genes(_adata, flavor="seurat", n_top_genes=2000)
-                sc.pp.pca(_adata)
-                sc.pp.neighbors(_adata)
-                sc.tl.leiden(_adata, key_added="clusters")
+                sc.pp.highly_variable_genes(_adata, flavor="seurat", n_top_genes=n_top_genes)
+                sc.pp.pca(_adata, n_comps=n_PCAs)
+                sc.pp.neighbors(_adata, n_neighbors=n_neighbors)
+
+                if method == 'leiden':
+                    sc.tl.leiden(_adata, key_added=cluster_labels, resolution=resolution)
+
+                else:
+                    sc.tl.louvain(_adata, key_added=cluster_labels, resolution=resolution)
 
                 _adata.write_h5ad(output_data)
 
-                return dcc.send_file(output_data)
+                return dcc.send_file(output_data), None
+
+            else:
+                raise exceptions.PreventUpdate
+
+        @du.callback(
+            Output('mtx_dir_path', 'data'),
+            id='make_h5ad_file',
+        )
+        def h5ad_upload_file_path(status: du.UploadStatus):
+            return str(Path([str(_) for _ in status.uploaded_files][0]).parent)
+
+        @app.callback(
+            [Output('download-h5ad', 'data'),
+             Output('making h5ad', 'children')],
+            [Input('mtx_dir_path', 'data'),
+             Input('run_make_h5ad', 'n_clicks'),
+             Input('sample_name', 'value')]
+        )
+        def make_h5ad(mtx_dir_path, n_clicks, sample_name):
+            if n_clicks is None:
+                raise exceptions.PreventUpdate
+
+            if ctx.triggered_id == 'run_make_h5ad' and mtx_dir_path is not None:
+                logging.info('making h5ad ...')
+                output_data = '__cache__/results.h5ad'
+                SpatialTools.check_dir_exists(output_data)
+
+                _adata = sc.read_10x_mtx(path=mtx_dir_path, cache=False)
+                _adata.var_names_make_unique()
+
+                _adata.obs['sample'] = sample_name
+
+                sc.pp.filter_cells(_adata, min_genes=0)
+                sc.pp.filter_cells(_adata, min_counts=0)
+
+                _adata.write(output_data)
+
+                return dcc.send_file(output_data), None
+
+            else:
+                raise exceptions.PreventUpdate
+
+        @du.callback(
+            Output('upload_tiff_file', 'data'),
+            id='tiff_file',
+        )
+        def upload_tiff(status: du.UploadStatus):
+            return str(status.latest_file)
+
+        @du.callback(
+            Output('upload_png_file', 'data'),
+            id='png_file',
+        )
+        def upload_png(status: du.UploadStatus):
+            return str(status.latest_file)
+
+        @du.callback(
+            Output('upload_pos_files', 'data'),
+            id='pos_files',
+        )
+        def uplaod_pos(status: du.UploadStatus):
+            logging.info('++++++ {}'.format(status.uploaded_files))
+            return [str(_) for _ in status.uploaded_files]
+
+        @app.callback(
+            [Output('download-len', 'data'),
+             Output('making-len', 'children')],
+            [Input('run_make_len', 'n_clicks'),
+             Input('upload_tiff_file', 'data'),
+             Input('upload_png_file', 'data'),
+             Input('upload_pos_files', 'data')],
+        )
+        def making_len(n_clicks, upload_tiff_file, upload_png_file, upload_pos_files):
+
+            if n_clicks is None:
+                raise exceptions.PreventUpdate
+
+            if ctx.triggered_id == 'run_make_len' and upload_tiff_file is not None and \
+                    upload_png_file is not None and upload_pos_files is not None:
+                logging.info('making len file .... ')
+                logging.info(upload_tiff_file)
+                logging.info(upload_png_file)
+                logging.info(upload_pos_files)
+
+                output_data = '__cache__/results'
+
+                len_file = SpatialTools(pic=upload_tiff_file,
+                                        low_pic=upload_png_file,
+                                        barcodes_pos=upload_pos_files)
+
+                len_file.save_to(output_data)
+
+                logging.info('done making len file .... ')
+                logging.info(str(output_data + '.len'))
+                return dcc.send_file(output_data + '.len'), None
+            else:
+                raise exceptions.PreventUpdate
+
+        @app.callback(
+            [Output('choice-h5ad', 'options'),
+             Output('choice-others', 'options')],
+            Input('BLACKHOLE', 'data')
+        )
+        def for_choice_h5ad(BLACKHOLE):
+            time.sleep(3)
+            if BLACKHOLE is not None:
+                logging.info(cls._adata_container.keys())
+                for_h5ad = [_ for _ in cls._adata_container.keys() if str(_).endswith('.h5ad')]
+                for_others = [_ for _ in cls._adata_container.keys() if not str(_).endswith('.h5ad')]
+
+                return for_h5ad, for_others
+
+            else:
+                raise exceptions.PreventUpdate
+
+        @app.callback(
+            [Output('download-merge', 'data'),
+             Output('making merge', 'children')],
+            [Input('choice-h5ad', 'value'),
+             Input('choice-others', 'value'),
+             Input('run_merge', 'n_clicks')]
+        )
+        def merge_data(h5ad_data, other_data, n_clicks):
+            if n_clicks is None:
+                raise exceptions.PreventUpdate
+
+            elif ctx.triggered_id == 'run_merge' and h5ad_data is not None and other_data is not None:
+                logging.info('doing merge data ....')
+
+                output_data = '__cache__/merged_data.h5ad'
+                SpatialTools.check_dir_exists(output_data)
+
+                _h5ad_data = cls._adata_container[h5ad_data].copy()
+                _other_data = cls._adata_container[other_data].copy()
+
+                if 'barcode' not in _other_data.columns:
+                    _other_data['barcode'] = _other_data.index
+
+                if 'barcode' not in _h5ad_data.obs.columns:
+                    _h5ad_data.obs['barcode'] = _h5ad_data.obs.index
+
+                logging.info('----> doing merging')
+                logging.info(_h5ad_data.obs)
+                logging.info(_other_data)
+                tmp_obs = _h5ad_data.obs.merge(_other_data, how='left', on='barcode')
+                tmp_obs = tmp_obs.set_index('barcode')
+                tmp_obs.index.name = None
+                _h5ad_data.obs = tmp_obs
+
+                logging.info('----> saving ')
+
+                _h5ad_data.write_h5ad(output_data)
+
+                return dcc.send_file(output_data), None
 
             else:
                 raise exceptions.PreventUpdate
@@ -471,7 +1025,7 @@ class SpatialApp:
             # logging.info('groups: {}'.format(groups))
             # logging.info('selectedData: {}'.format(selectedData))
 
-            if density_by:
+            try:
                 df = cls._meta_data
                 if groups:
                     df = cls._meta_data.query('{} in {}'.format(color_by, groups))
@@ -487,11 +1041,14 @@ class SpatialApp:
 
                 return fig
 
-            raise exceptions.PreventUpdate
+            except:
+
+                return cls.return_text_replace_figure(text='Please select density value', size=20)
 
         @app.callback(
             Output("cluster-graph", "figure"),
             [
+                Input('selected_adata', 'value'),
                 Input('WHITEHOLE', 'data'),
                 Input('BLACKHOLE', 'data'),
                 Input("color_by", 'value'),
@@ -507,7 +1064,7 @@ class SpatialApp:
                 Input('y2', 'value'),
             ],
         )
-        def make_graph(WHITEHOLE, BLACKHOLE, color_by,
+        def make_graph(selected_adata, WHITEHOLE, BLACKHOLE, color_by,
                        alpha, feature, pic_data,
                        cmap, point_size, groups,
                        x1, x2, y1, y2):
@@ -546,8 +1103,7 @@ class SpatialApp:
                     return_hire_pic = cls._spatial_tools_object.__dict__['_pic']
                     crop_coord = False
                 else:
-                    logging.info('3')
-                    raise exceptions.PreventUpdate
+                    return cls.return_text_replace_figure(text='Please upload a SpatialTools object', size=25)
 
             logging.info('color_by={}'.format(color_by))
             logging.info('feature={}'.format(feature))
@@ -556,34 +1112,45 @@ class SpatialApp:
                 logging.info('4')
                 if pic_data == 'hire He':
 
-                    return px.imshow(return_hire_pic, binary_string=True, binary_compression_level=5)
+                    return cls.layout_figure(px.imshow(return_hire_pic,
+                                                       binary_string=True,
+                                                       binary_compression_level=5))
                 else:
 
-                    return px.imshow(return_low_pic, binary_string=True, binary_compression_level=5)
+                    return cls.layout_figure(px.imshow(return_low_pic,
+                                                       binary_string=True,
+                                                       binary_compression_level=5))
 
             if str(feature) == 'None':
                 feature = False
 
             logging.info('plotting')
 
-            if point_size is None:
-                raise exceptions.PreventUpdate
+            try:
+                if point_size is None:
+                    raise exceptions.PreventUpdate
 
-            pic = cls._spatial_tools_object.s1000_spatial_plot(adata=cls._adata,
-                                                               color=color_by,
-                                                               feature=feature,
-                                                               size=float(point_size),
-                                                               cmap=cmap,
-                                                               groups=list(groups) if groups else groups,
-                                                               crop_coord=crop_coord,
-                                                               draw_pic=draw_pic,
-                                                               low_pic=low_pic,
-                                                               pic_only=pic_only,
-                                                               alpha=alpha,
-                                                               interactive=True)
-            pic.update_layout(uirevision=True)
+                pic = cls._spatial_tools_object.s1000_spatial_plot(adata=cls._adata,
+                                                                   color=color_by,
+                                                                   feature=feature,
+                                                                   size=float(point_size),
+                                                                   cmap=cmap,
+                                                                   groups=list(groups) if groups else groups,
+                                                                   crop_coord=crop_coord,
+                                                                   draw_pic=draw_pic,
+                                                                   low_pic=low_pic,
+                                                                   pic_only=pic_only,
+                                                                   alpha=alpha,
+                                                                   interactive=True)
 
-            return pic
+                logging.info('end')
+                pic.update_layout(uirevision=True)
+
+                return pic
+
+            except:
+
+                return cls.return_text_replace_figure(text='Please chose right parameter', size=25)
 
         logging.info('listen: http://127.0.0.1:{}/'.format(port))
         app.run_server(debug=debug, mode='external', port=port, host='127.0.0.1')
@@ -649,7 +1216,6 @@ class SpatialApp:
                              ))
 
         fig.update_layout(
-            hoverdistance=1,
             legend=dict(yanchor="top",
                         itemsizing='constant',
                         font=dict(
@@ -716,7 +1282,6 @@ class SpatialApp:
         )
 
         fig.update_layout(
-            hoverdistance=1,
             title={
                 'text': 'feature: {}'.format(feature),
                 # 'y': 0.9,
@@ -1263,7 +1828,7 @@ class SpatialTools:
 
 if __name__ == '__main__':
     desc = """
-    Version: Version beta
+    Version: Version v2.1.1 beta
     Contact: zhangjm <zhangjm@biomarker.com.cn>
     Program Date: 2022.10.25
     Description: spatial tools
