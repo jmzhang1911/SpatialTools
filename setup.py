@@ -25,7 +25,7 @@ setup(
                       'pickleshare>=0.7.5',
                       'seaborn>=0.12.0',
                       'dash-uploader==0.7.0a1',
-                      'packages==21.3'],
+                      'packaging==21.3.0'],
     zip_safe=False,
     scripts=['spatial_tools/spatial_tools.py', 'spatial_tools/run_app.py']
 )
