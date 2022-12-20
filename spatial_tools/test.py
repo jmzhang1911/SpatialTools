@@ -37,4 +37,6 @@ import json
 
 # spatial_tools_v2.SpatialApp.run_dash(spatial_tools_obj=s1000_level7, port=2008, debug=True)
 
-spatial_tools.SpatialApp.run_dash(port=2008, debug=True)
+mouse_len = spatial_tools.SpatialTools.load_from('data_set/mouse.len')
+adata = pd.read_csv('data_set/L7_heAuto_RCTD.xls', sep='\t')
+spatial_tools.SpatialApp.run_dash(port=2008, debug=True, spatial_tools_obj=mouse_len, adata=adata)
