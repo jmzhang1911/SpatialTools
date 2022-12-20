@@ -9,9 +9,9 @@ import spatial_tools
 import pandas as pd
 import logging
 
-
-mouse_len = spatial_tools.SpatialTools.load_from(str(Path(__file__) / 'spatial_tools/demo_data/mouse.len'))
-adata = pd.read_csv(str(Path(__file__) / 'spatial_tools/demo_data/L7_heAuto_RCTD.xls'), sep='\t')
+mouse_len = spatial_tools.SpatialTools.load_from(str(Path(__file__).parent / 'spatial_tools/demo_data/mouse.len'))
+adata = pd.read_csv(str(Path(__file__).parent / 'spatial_tools/demo_data/L7_heAuto_RCTD.xls'), sep='\t').rename(
+    columns={'class': 'cell_type'})
 
 app = spatial_tools.SpatialApp.run_dash(debug=False, return_app=True, spatial_tools_obj=mouse_len, adata=adata)
 server = app.server
