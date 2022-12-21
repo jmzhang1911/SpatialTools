@@ -3,10 +3,14 @@
 # @Time : 2022/12/6 15:41
 # @Author : jmzhang
 # @Email : zhangjm@biomarker.com.cn
-
+import logging
 
 import spatial_tools
 import argparse
+
+app = spatial_tools.SpatialApp.run_dash(debug=False)
+server = app.server
+
 
 if __name__ == '__main__':
     desc = """
@@ -20,6 +24,7 @@ if __name__ == '__main__':
     parser.add_argument('--port', type=int, help='port', default=5070)
     input_args = parser.parse_args()
 
-    spatial_tools.SpatialApp.run_dash(port=input_args.port, debug=False)
+    app = spatial_tools.SpatialApp.run_dash(port=input_args.port, debug=False, return_app=False)
+    app.run_server(debug=False, mode='external')
 
 

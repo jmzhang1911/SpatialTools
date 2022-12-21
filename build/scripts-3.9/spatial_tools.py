@@ -132,7 +132,7 @@ class SpatialApp:
         return figure
 
     @classmethod
-    def run_dash(cls, spatial_tools_obj=None, adata=None, port=30000, debug=False):
+    def run_dash(cls, spatial_tools_obj=None, adata=None, port=30000, debug=False, return_app=False):
         from dash import Input, Output, dcc, html, exceptions, ctx, State
         import plotly.express as px
         import dash_uploader as du
@@ -615,7 +615,7 @@ class SpatialApp:
                         dbc.Row(
                             [
                                 # dbc.Col(html.Img(src=PLOTLY_LOGO, height="30px")),
-                                dbc.Col(dbc.NavbarBrand("SpatialTools v2.1.2"),
+                                dbc.Col(dbc.NavbarBrand("SpatialTools v2.1.3"),
                                         style={"margin-left": "20px", 'fontsize': '10px'}),
                             ],
                             align="center",
@@ -1143,8 +1143,15 @@ class SpatialApp:
 
                 return cls.return_text_replace_figure(text='Please chose right parameter', size=25)
 
-        logging.info('listen: http://127.0.0.1:{}/'.format(port))
-        app.run_server(debug=debug, mode='external', port=port, host='127.0.0.1')
+
+        if return_app:
+
+            return app
+
+        else:
+
+            logging.info('listen: http://127.0.0.1:{}/'.format(port))
+            app.run_server(debug=debug, mode='external', port=port, host='127.0.0.1')
 
     @classmethod
     def terminate_server_for_port(cls):
@@ -1819,7 +1826,7 @@ class SpatialTools:
 
 if __name__ == '__main__':
     desc = """
-    Version: Version v2.1.1 beta
+    Version: Version v2.1.3 beta
     Contact: zhangjm <zhangjm@biomarker.com.cn>
     Program Date: 2022.10.25
     Description: spatial tools

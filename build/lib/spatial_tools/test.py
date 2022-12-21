@@ -13,6 +13,7 @@ import anndata as ad
 import pandas as pd
 import json
 
+
 # s1000_level7 = spatial_tools.SpatialTools.load_from('data_set/s1000_level7_reference.pkl.gz')
 # adata_level7 = ad.read_h5ad('/Users/jmzhang/workspace/mygithub/bioinfor_note/spatial_note/vignette_data/results/level7.h5ad')
 
@@ -37,4 +38,6 @@ import json
 
 # spatial_tools_v2.SpatialApp.run_dash(spatial_tools_obj=s1000_level7, port=2008, debug=True)
 
-spatial_tools.SpatialApp.run_dash(port=2008, debug=True)
+mouse_len = spatial_tools.SpatialTools.load_from('data_set/mouse.len')
+adata = pd.read_csv('data_set/L7_heAuto_RCTD.xls', sep='\t')
+spatial_tools.SpatialApp.run_dash(port=2008, debug=True, spatial_tools_obj=mouse_len, adata=adata)
