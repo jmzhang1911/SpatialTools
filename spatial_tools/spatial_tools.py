@@ -615,7 +615,7 @@ class SpatialApp:
                         dbc.Row(
                             [
                                 # dbc.Col(html.Img(src=PLOTLY_LOGO, height="30px")),
-                                dbc.Col(dbc.NavbarBrand("SpatialTools v2.1.2"),
+                                dbc.Col(dbc.NavbarBrand("SpatialTools v2.1.3"),
                                         style={"margin-left": "20px", 'fontsize': '10px'}),
                             ],
                             align="center",
@@ -1826,7 +1826,7 @@ class SpatialTools:
 
 if __name__ == '__main__':
     desc = """
-    Version: Version v2.1.1 beta
+    Version: Version v2.1.3 beta
     Contact: zhangjm <zhangjm@biomarker.com.cn>
     Program Date: 2022.10.25
     Description: spatial tools
