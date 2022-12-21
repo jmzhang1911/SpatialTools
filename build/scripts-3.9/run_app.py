@@ -8,9 +8,7 @@ import logging
 import spatial_tools
 import argparse
 
-app = spatial_tools.SpatialApp.run_dash(debug=False)
-server = app.server
-
+app = spatial_tools.SpatialApp.run_dash(debug=False, return_app=True)
 
 if __name__ == '__main__':
     desc = """
@@ -23,8 +21,5 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=desc, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('--port', type=int, help='port', default=5070)
     input_args = parser.parse_args()
-
-    app = spatial_tools.SpatialApp.run_dash(port=input_args.port, debug=False, return_app=False)
-    app.run_server(debug=False, mode='external')
-
-
+    logging.info(input_args.port)
+    app.run_server(debug=False, mode='external', port=input_args.port)

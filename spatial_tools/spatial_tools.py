@@ -132,7 +132,7 @@ class SpatialApp:
         return figure
 
     @classmethod
-    def run_dash(cls, spatial_tools_obj=None, adata=None, port=30000, debug=False, return_app=False):
+    def run_dash(cls, spatial_tools_obj=None, adata=None, port=None, debug=False, return_app=False):
         from dash import Input, Output, dcc, html, exceptions, ctx, State
         import plotly.express as px
         import dash_uploader as du
@@ -1149,9 +1149,11 @@ class SpatialApp:
             return app
 
         else:
-
-            logging.info('listen: http://127.0.0.1:{}/'.format(port))
-            app.run_server(debug=debug, mode='external', port=port, host='127.0.0.1')
+            # logging.info('listen: http://127.0.0.1:{}/'.format(port))
+            if port:
+                app.run_server(debug=debug, mode='external', port=port)
+            else:
+                app.run_server(debug=debug, mode='external')
 
     @classmethod
     def terminate_server_for_port(cls):
