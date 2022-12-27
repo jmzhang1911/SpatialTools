@@ -1,14 +1,20 @@
 from setuptools import setup
 from setuptools import find_packages
 
-VERSION = '2.1.6'
+VERSION = '2.1.9'
 
 setup(
     name='SpatialTools',  # package name
-    version='2.1.6',  # package version
+    version='2.1.9',  # package version
     description='spatial tools for S1000',  # package description
     packages=find_packages(),
-    install_requires=['anndata>=0.8.0',
+    install_requires=['numpy>=1.23.0',
+                      'pandas>=1.4.3',
+                      'Pillow>=9.2.0',
+                      'anndata>=0.8.0',
+                      'kiwisolver>=1.4.4',
+                      'pyzmq>=23.2.1',
+                      'scipy>=1.9.1',
                       'scanpy>=1.9.1',
                       'dash>=2.6.0',
                       'dash-bootstrap-components>=1.2.0',

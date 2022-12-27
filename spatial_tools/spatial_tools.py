@@ -615,7 +615,7 @@ class SpatialApp:
                         dbc.Row(
                             [
                                 # dbc.Col(html.Img(src=PLOTLY_LOGO, height="30px")),
-                                dbc.Col(dbc.NavbarBrand("SpatialTools v2.1.3"),
+                                dbc.Col(dbc.NavbarBrand("SpatialTools v2"),
                                         style={"margin-left": "20px", 'fontsize': '10px'}),
                             ],
                             align="center",
@@ -1143,7 +1143,6 @@ class SpatialApp:
 
                 return cls.return_text_replace_figure(text='Please chose right parameter', size=25)
 
-
         if return_app:
 
             return app
@@ -1305,6 +1304,9 @@ class SpatialApp:
 
 
 class SpatialTools:
+    # 0.1
+    AUTO_SIZE_DISCRETE = {'L1': 1, 'L2': 0.02, 'L3': 0.1, 'L4': 0.4, 'L5': 0.4, 'L6': 0.4, 'L7': 1, 'L13': 1}
+    AUTO_SIZE_CONTINUOUS = {'L1': 1, 'L2': 0.1, 'L3': 0.4, 'L4': 0.6, 'L5': 0.6, 'L6': 0.6, 'L7': 0.9, 'L13': 1}
 
     def __init__(self, pic, barcodes_pos, low_pic=None):
         self._pic = image.imread(pic)
@@ -1468,6 +1470,7 @@ class SpatialTools:
     def _discrete_scatter_plot(self, ax, para_dict: dict, color_dict):
         plot_para_dict = {'title': '', 'xlabel': 'S1000 spatial 1', 'ylabel': 'S1000 spatial 2',
                           'legend_scale': 1.2, 'legend_ncol': math.ceil(len(color_dict) / 17),
+                          'legend_marker_size': None,
                           'show_ticks_and_labels': True}
 
         if para_dict:
@@ -1476,11 +1479,21 @@ class SpatialTools:
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.99, box.height * 0.99])
 
-        ax.legend(
+        # ax.legend(
+        #     loc='center left',
+        #     markerscale=float(plot_para_dict['legend_scale']),
+        #     bbox_to_anchor=(1, 0.5), ncol=int(plot_para_dict['legend_ncol']),
+        #     fontsize=16, frameon=False, handletextpad=0.3)
+
+        lgnd = plt.legend(
             loc='center left',
             markerscale=float(plot_para_dict['legend_scale']),
             bbox_to_anchor=(1, 0.5), ncol=int(plot_para_dict['legend_ncol']),
             fontsize=16, frameon=False, handletextpad=0.3)
+
+        if plot_para_dict['legend_marker_size']:
+            for _ in range(len(lgnd.legendHandles)):
+                lgnd.legendHandles[_]._sizes = [plot_para_dict['legend_marker_size']]
 
         plt.title(plot_para_dict['title'])
         plt.xlabel(plot_para_dict['xlabel'])
@@ -1512,6 +1525,7 @@ class SpatialTools:
                            color='seurat_clusters',
                            groups=None,
                            size=1,
+                           size_auto=False,
                            alpha=1,
                            alpha_map_to_value=False,
                            cmap='viridis',
@@ -1638,6 +1652,9 @@ class SpatialTools:
 
             size = point_size ** 2 if size == 1 else point_size ** 2 * size
 
+            if size_auto:
+                size = size * self.AUTO_SIZE_DISCRETE[self._get_adata_level(adata)]
+
             grouped = plot_data.groupby(color)
 
             # 执行交互
@@ -1729,6 +1746,9 @@ class SpatialTools:
                 raise ValueError('wrong feature')
 
             size = point_size ** 2 if size == 1 else point_size ** 2 * size
+
+            if size_auto:
+                size = size * self.AUTO_SIZE_CONTINUOUS[self._get_adata_level(adata)]
 
             plot_para_dict = {'xlabel': 'S1000 spatial 1', 'ylabel': 'S1000 spatial 2',
                               'show_ticks_and_labels': True, 'shrink': 0.4, 'pad': 0.05}
@@ -1828,7 +1848,7 @@ class SpatialTools:
 
 if __name__ == '__main__':
     desc = """
-    Version: Version v2.1.3 beta
+    Version: Version v2
     Contact: zhangjm <zhangjm@biomarker.com.cn>
     Program Date: 2022.10.25
     Description: spatial tools
