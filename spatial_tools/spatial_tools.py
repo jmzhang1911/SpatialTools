@@ -24,7 +24,7 @@ import json
 import math
 import re
 
-import spatial_tools
+# import spatial_tools
 
 FORMAT = '%(asctime)s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT, datefmt='%Y-%m-%d %H:%M:%S')
@@ -150,7 +150,7 @@ class SpatialApp:
                              for i in selectedData['points']]
             return barcodes_list
 
-        if isinstance(spatial_tools_obj, spatial_tools.SpatialTools):
+        if isinstance(spatial_tools_obj, SpatialTools):
             cls._spatial_tools_object = spatial_tools_obj
 
         if isinstance(adata, pd.DataFrame):
@@ -1548,7 +1548,8 @@ class SpatialTools:
                            low_pic=False,
                            interactive=False,
                            pic_only=False,
-                           run_dash=False):
+                           run_dash=False,
+                           **kwargs):
         """
         - adata:
         - color:
