@@ -1493,7 +1493,7 @@ class SpatialTools:
 
         if plot_para_dict['legend_marker_size']:
             for _ in range(len(lgnd.legendHandles)):
-                lgnd.legendHandles[_]._sizes = [plot_para_dict['legend_marker_size']]
+                lgnd.legendHandles[_]._sizes = [math.floor(float(plot_para_dict['legend_marker_size']))]
 
         plt.title(plot_para_dict['title'])
         plt.xlabel(plot_para_dict['xlabel'])
@@ -1864,6 +1864,7 @@ if __name__ == '__main__':
     parser.add_argument('--dpi', type=int, help='dpi', default=500)
     parser.add_argument('--groups', type=str, help='groups', default=None)
     parser.add_argument('--size', type=float, help='dot size', default=1)
+    parser.add_argument('--size_auto', type=bool, help='just size auto', default=False)
     parser.add_argument('--alpha', type=float, help='alpha', default=1)
     parser.add_argument('--figsize', type=str, help='figsize', default='(10, 10)')
     parser.add_argument('--to_save', type=str, help='to_save', default=None)
@@ -1919,6 +1920,7 @@ if __name__ == '__main__':
         color=input_args.color,
         groups=input_args.groups,
         size=input_args.size,
+        auto_size=input_args.size_auto,
         alpha=input_args.alpha,
         figsize=input_args.figsize,
         to_save=input_args.to_save,
