@@ -1,12 +1,13 @@
 from setuptools import setup
 from setuptools import find_packages
 
-VERSION = '2.1.10'
+VERSION = '2.1.13'
 
 setup(
     name='SpatialTools',  # package name
-    version='2.1.10',  # package version
+    version='2.1.13',  # package version
     description='spatial tools for S1000',  # package description
+    python_requires='>=3.9',
     packages=find_packages(),
     install_requires=['numpy>=1.23.0',
                       'pandas>=1.4.3',
@@ -33,5 +34,5 @@ setup(
                       'dash-uploader==0.7.0a1',
                       'packaging==21.3.0'],
     zip_safe=False,
-    scripts=['spatial_tools/spatial_tools.py', 'spatial_tools/run_app.py']
+    scripts=['spatial_tools/run_spatial_tools', 'spatial_tools/run_app.py']
 )

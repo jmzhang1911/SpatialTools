@@ -4,8 +4,5 @@
 # @Author : jmzhang
 # @Email : zhangjm@biomarker.com.cn
 
-import spatial_tools as st
-import scanpy as sc
 
-# from spatial_tools import SpatialTool
 

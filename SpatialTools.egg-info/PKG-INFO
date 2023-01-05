@@ -1,10 +1,11 @@
 Metadata-Version: 2.1
 Name: SpatialTools
-Version: 2.1.10
+Version: 2.1.13
 Summary: spatial tools for S1000
 Home-page: UNKNOWN
 License: UNKNOWN
 Platform: UNKNOWN
+Requires-Python: >=3.9
 
 UNKNOWN
 

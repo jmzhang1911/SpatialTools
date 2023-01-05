@@ -12,6 +12,7 @@ spatial_tools/demo.py
 spatial_tools/demo_v1.py
 spatial_tools/plotting.py
 spatial_tools/run_app.py
+spatial_tools/run_spatial_tools
 spatial_tools/spatial_tools.py
 spatial_tools/spatial_tools_origin.py
 spatial_tools/test.py
