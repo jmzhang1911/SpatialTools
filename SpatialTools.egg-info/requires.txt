@@ -21,3 +21,6 @@ pickleshare>=0.7.5
 seaborn>=0.12.0
 dash-uploader==0.7.0a1
 packaging==21.3.0
+louvain>=0.8.0
+leidenalg>=0.9.0
+igraph>=0.10.1

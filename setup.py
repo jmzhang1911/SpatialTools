@@ -1,11 +1,11 @@
 from setuptools import setup
 from setuptools import find_packages
 
-VERSION = '2.1.13'
+VERSION = '2.1.15'
 
 setup(
     name='SpatialTools',  # package name
-    version='2.1.13',  # package version
+    version='2.1.15',  # package version
     description='spatial tools for S1000',  # package description
     python_requires='>=3.9',
     packages=find_packages(),
@@ -32,7 +32,10 @@ setup(
                       'pickleshare>=0.7.5',
                       'seaborn>=0.12.0',
                       'dash-uploader==0.7.0a1',
-                      'packaging==21.3.0'],
+                      'packaging==21.3.0',
+                      'louvain>=0.8.0',
+                      'leidenalg>=0.9.0',
+                      'igraph>=0.10.1'],
     zip_safe=False,
     scripts=['spatial_tools/run_spatial_tools', 'spatial_tools/run_app.py']
 )

@@ -1192,10 +1192,10 @@ class SpatialApp:
         import plotly.express as px
 
         if pic_only:
-            return px.imshow(pic, binary_string=True, binary_compression_level=5)
+            return px.imshow(pic[:, :, :3], binary_string=True, binary_compression_level=5)
 
         if draw_pic:
-            fig = px.imshow(pic, binary_string=True, binary_compression_level=5)
+            fig = px.imshow(pic[:, :, :3], binary_string=True, binary_compression_level=5)
         else:
             fig = go.Figure()
 
@@ -1258,10 +1258,10 @@ class SpatialApp:
         import plotly.express as px
 
         if pic_only:
-            return px.imshow(pic, binary_string=True, binary_compression_level=5)
+            return px.imshow(pic[:, :, :3], binary_string=True, binary_compression_level=5)
 
         if draw_pic:
-            fig = px.imshow(pic, binary_string=True, binary_compression_level=5)
+            fig = px.imshow(pic[:, :, :3], binary_string=True, binary_compression_level=5)
         else:
             fig = go.Figure()
 
@@ -1309,10 +1309,10 @@ class SpatialTools:
     AUTO_SIZE_CONTINUOUS = {'L1': 1, 'L2': 0.1, 'L3': 0.4, 'L4': 0.6, 'L5': 0.6, 'L6': 0.6, 'L7': 0.9, 'L13': 1}
 
     def __init__(self, pic, barcodes_pos, low_pic=None):
-        self._pic = image.imread(pic)
+        self._pic = image.imread(pic)[:, :, :3]
 
         if low_pic:
-            self._low_pic = image.imread(low_pic)
+            self._low_pic = image.imread(low_pic)[:, :, :3]
             self._low_contain = True
             self.low_scalar = self._cal_zoom_rate(self._low_pic.shape[0], self._low_pic.shape[1])
         else:
@@ -1348,7 +1348,15 @@ class SpatialTools:
 
     @staticmethod
     def _get_adata_level(input_adata):
-        return str(input_adata['barcode'][0]).split('_')[0]
+        if isinstance(input_adata, pd.DataFrame):
+            tmp_data = input_adata
+        else:
+            tmp_data = input_adata.obs
+
+        if 'barcode' not in tmp_data.columns:
+            return str(tmp_data.rownames[0]).split('_')[0]
+
+        return str(tmp_data['barcode'][0]).split('_')[0]
 
     @property
     def pic(self):
