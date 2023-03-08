@@ -1309,7 +1309,8 @@ class SpatialTools:
     AUTO_SIZE_CONTINUOUS = {'L1': 1, 'L2': 0.1, 'L3': 0.4, 'L4': 0.6, 'L5': 0.6, 'L6': 0.6, 'L7': 0.9, 'L13': 1}
 
     def __init__(self, pic, barcodes_pos, low_pic=None):
-        self._pic = image.imread(pic)[:, :, :3]
+        #self._pic = image.imread(pic)[:, :, :3]
+        self._pic = image.imread(pic)
 
         if low_pic:
             self._low_pic = image.imread(low_pic)[:, :, :3]
@@ -1603,6 +1604,7 @@ class SpatialTools:
             if 'barcode' not in adata.columns:
                 adata['barcode'] = adata.index
 
+            logging.info(adata.head())
             self._adata_type = 'DataFrame'
 
             obsm = self.container[self._get_adata_level(adata)]['obsm']

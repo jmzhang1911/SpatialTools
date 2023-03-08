@@ -5,6 +5,8 @@ VERSION = '2.1.15'
 
 setup(
     name='SpatialTools',  # package name
+    author='Jingmin Zhang',
+    author_email='jmzhang1911@gmail.com',
     version='2.1.15',  # package version
     description='spatial tools for S1000',  # package description
     python_requires='>=3.9',

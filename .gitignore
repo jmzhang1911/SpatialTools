@@ -4,3 +4,6 @@
 __cache__
 vignettes
 /spatial_tools/test.ipynb
+test/3.len
+*.len
+*.png
